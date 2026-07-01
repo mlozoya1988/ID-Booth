@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ID Booth — Student Photo Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F1F3F4;
+    --panel:#FFFFFF;
+    --ink:#1C2430;
+    --muted:#6B7280;
+    --border:#DCE0E5;
+    --accent:#E4572E;
+    --accent-dark:#C4451F;
+    --confirm:#2F6F4E;
+    --confirm-dark:#245A3E;
+    --danger:#B3261E;
+    --tab-bg:#EDEAE2;
+    --sans:'Inter',system-ui,-apple-system,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+  }
+  .app{
+    max-width:1240px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  header.top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+  }
+  header.top .brand{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+  }
+  header.top h1{
+    font-size:26px;
+    font-weight:700;
+    letter-spacing:-0.02em;
+    margin:0;
+  }
+  header.top .stamp{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    border:1px solid var(--border);
+    padding:4px 9px;
+    border-radius:3px;
+    background:var(--panel);
+  }
+  header.top .count{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--muted);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(0,420px) 1fr;
+    gap:22px;
+    align-items:start;
+  }
+  @media (max-width:860px){
+    .grid{grid-template-columns:1fr;}
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .panel-head{
+    padding:14px 18px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .panel-head h2{
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin:0;
+    color:var(--muted);
+  }
+  .panel-body{padding:18px;}
+
+  /* ---- form fields ---- */
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:15px;
+    font-family:var(--sans);
+    background:#FAFBFC;
+    color:var(--ink);
+    transition:border-color .15s, background .15s;
+  }
+  .field input#studentId{
+    font-family:var(--mono);
+    letter-spacing:.03em;
+  }
+  .field input:focus, .field select:focus{
+    outline:none;
+    border-color:var(--accent);
+    background:#fff;
+  }
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+
+  /* ---- camera viewfinder ---- */
+  .viewfinder{
+    position:relative;
+    width:100%;
+    aspect-ratio:4/3;
+    background:#0E1116;
+    border-radius:8px;
+    overflow:hidden;
+    margin-bottom:14px;
+  }
+  .viewfinder video, .viewfinder img.captured{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .viewfinder .bracket{
+    position:absolute;
+    width:26px;
+    height:26px;
+    border-color:rgba(255,255,255,.85);
+    pointer-events:none;
+  }
+  .viewfinder .bracket.tl{top:10px;left:10px;border-top:2px solid;border-left:2px solid;}
+  .viewfinder .bracket.tr{top:10px;right:10px;border-top:2px solid;border-right:2px solid;}
+  .viewfinder .bracket.bl{bottom:10px;left:10px;border-bottom:2px solid;border-left:2px solid;}
+  .viewfinder .bracket.br{bottom:10px;right:10px;border-bottom:2px solid;border-right:2px solid;}
+  .viewfinder .vf-message{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    color:#C9CDD4;
+    font-size:13px;
+    text-align:center;
+    padding:20px;
+  }
+  .viewfinder .vf-message button{
+    margin-top:4px;
+  }
+
+  /* ---- crop stage ---- */
+  #cropStage{display:none;}
+  .crop-frame{
+    position:relative;
+    width:100%;
+    background:#0E1116;
+    border-radius:8px;
+    overflow:hidden;
+    margin-bottom:14px;
+    display:flex;
+    justify-content:center;
+    touch-action:none;
+  }
+  .crop-frame img#capturedImg{
+    display:block;
+    max-width:100%;
+    max-height:520px;
+    user-select:none;
+    -webkit-user-drag:none;
+  }
+  .crop-box{
+    position:absolute;
+    border:2px solid var(--accent);
+    box-shadow:0 0 0 2000px rgba(0,0,0,.45);
+    cursor:move;
+    touch-action:none;
+  }
+  .crop-handle{
+    position:absolute;
+    width:16px;
+    height:16px;
+    background:var(--accent);
+    border:2px solid #fff;
+    border-radius:50%;
+    touch-action:none;
+  }
+  .crop-handle.nw{top:-9px;left:-9px;cursor:nwse-resize;}
+  .crop-handle.ne{top:-9px;right:-9px;cursor:nesw-resize;}
+  .crop-handle.sw{bottom:-9px;left:-9px;cursor:nesw-resize;}
+  .crop-handle.se{bottom:-9px;right:-9px;cursor:nwse-resize;}
+
+  /* ---- buttons ---- */
+  button{
+    font-family:var(--sans);
+    font-size:14px;
+    font-weight:600;
+    border-radius:7px;
+    border:1px solid transparent;
+    padding:10px 16px;
+    cursor:pointer;
+    transition:filter .12s, transform .05s;
+  }
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+  button.primary{background:var(--accent); color:#fff;}
+  button.primary:hover:not(:disabled){filter:brightness(1.06);}
+  button.confirm{background:var(--confirm); color:#fff;}
+  button.confirm:hover:not(:disabled){filter:brightness(1.08);}
+  button.ghost{background:#fff; color:var(--ink); border-color:var(--border);}
+  button.ghost:hover:not(:disabled){background:#F5F6F7;}
+  button.subtle{background:transparent; color:var(--muted); border-color:var(--border); font-weight:500; padding:6px 10px; font-size:12px;}
+  button.subtle:hover:not(:disabled){background:#F5F6F7; color:var(--ink);}
+  button.danger-text{background:transparent; color:var(--danger); border:none; font-weight:500; padding:4px 6px; font-size:12px;}
+  button.danger-text:hover:not(:disabled){text-decoration:underline;}
+
+  .shutter-row{display:flex; align-items:center; gap:14px; justify-content:center; margin-bottom:4px;}
+  .shutter{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    background:var(--panel);
+    border:3px solid var(--accent);
+    position:relative;
+    cursor:pointer;
+    flex:none;
+  }
+  .shutter::after{
+    content:'';
+    position:absolute;
+    inset:6px;
+    border-radius:50%;
+    background:var(--accent);
+  }
+  .shutter:hover::after{background:var(--accent-dark);}
+  .shutter:disabled{opacity:.4; cursor:not-allowed;}
+
+  .crop-actions, .capture-actions{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+  }
+
+  .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:6px;}
+  .warn-box{
+    background:#FFF4ED;
+    border:1px solid #F0C4A8;
+    color:#8A3B12;
+    font-size:13px;
+    padding:12px 14px;
+    border-radius:7px;
+    margin-bottom:14px;
+    display:none;
+  }
+  .warn-box .warn-actions{margin-top:10px; display:flex; gap:8px;}
+  .warn-box.show{display:block;}
+
+  /* ---- roster panel ---- */
+  .roster-controls{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .roster-controls input[type=text]{
+    flex:1;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:13px;
+    font-family:var(--sans);
+    background:#FAFBFC;
+  }
+  .roster-controls input[type=text]:focus{outline:none; border-color:var(--accent); background:#fff;}
+
+  .roster-list{
+    max-height:640px;
+    overflow-y:auto;
+  }
+  .letter-tab{
+    position:sticky;
+    top:0;
+    background:var(--tab-bg);
+    color:#5B5240;
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.12em;
+    padding:6px 18px;
+    border-bottom:1px solid var(--border);
+    border-top:1px solid var(--border);
+    z-index:1;
+  }
+  .roster-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 18px;
+    border-bottom:1px solid #EEF0F2;
+  }
+  .roster-row:hover{background:#FAFBFC;}
+  .roster-thumb{
+    width:46px;
+    height:46px;
+    border-radius:6px;
+    object-fit:cover;
+    background:#E7E9EC;
+    flex:none;
+    border:1px solid var(--border);
+  }
+  .roster-meta{flex:1; min-width:0;}
+  .roster-meta .name{font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .roster-meta .id{font-family:var(--mono); font-size:12px; color:var(--muted);}
+  .roster-actions{display:flex; gap:2px; flex:none;}
+
+  .empty-state{
+    padding:48px 24px;
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .empty-state strong{display:block; color:var(--ink); font-size:14px; margin-bottom:6px;}
+
+  .toast{
+    position:fixed;
+    bottom:22px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:#fff;
+    padding:11px 18px;
+    border-radius:7px;
+    font-size:13px;
+    opacity:0;
+    transition:opacity .2s, transform .2s;
+    pointer-events:none;
+    z-index:50;
+    max-width:90vw;
+    text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .footer-note{
+    margin-top:22px;
+    font-size:12px;
+    color:var(--muted);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>ID Booth</h1>
+      <span class="stamp">Student Photo Ledger</span>
+    </div>
+    <span class="count" id="rosterCount">0 students saved</span>
+  </header>
+
+  <div class="grid">
+    <!-- CAPTURE PANEL -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Capture</h2>
+        <select id="cameraSelect" style="max-width:150px; font-size:12px; padding:5px 7px; border:1px solid var(--border); border-radius:6px; background:#fff;"></select>
+      </div>
+      <div class="panel-body">
+
+        <div class="field">
+          <label for="studentId">ID number</label>
+          <input id="studentId" type="text" placeholder="e.g. 100482" autocomplete="off">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="studentFirstName">First name</label>
+            <input id="studentFirstName" type="text" placeholder="e.g. John" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="studentLastName">Last name</label>
+            <input id="studentLastName" type="text" placeholder="e.g. Doe" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="warn-box" id="dupWarn">
+          <span id="dupWarnText"></span>
+          <div class="warn-actions">
+            <button class="danger-text" id="dupOverwriteBtn" style="border:1px solid var(--danger); border-radius:6px;">Overwrite existing photo</button>
+            <button class="subtle" id="dupCancelBtn">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Live camera -->
+        <div class="viewfinder" id="viewfinder">
+          <video id="video" autoplay playsinline muted></video>
+          <div class="bracket tl"></div>
+          <div class="bracket tr"></div>
+          <div class="bracket bl"></div>
+          <div class="bracket br"></div>
+          <div class="vf-message" id="vfMessage" style="display:none;"></div>
+        </div>
+        <div class="shutter-row" id="liveControls">
+          <button class="ghost" id="switchCamBtn" style="visibility:hidden;">Retry camera</button>
+          <button class="shutter" id="shutterBtn" title="Take photo"></button>
+          <div style="width:110px;"></div>
+        </div>
+        <p class="hint" id="liveHint">Position the student in frame, then press the shutter.</p>
+
+        <!-- Crop stage -->
+        <div id="cropStage">
+          <div class="crop-frame" id="cropFrame">
+            <img id="capturedImg" alt="Captured photo">
+            <div class="crop-box" id="cropBox">
+              <div class="crop-handle nw"></div>
+              <div class="crop-handle ne"></div>
+              <div class="crop-handle sw"></div>
+              <div class="crop-handle se"></div>
+            </div>
+          </div>
+          <div class="crop-actions">
+            <button class="ghost" id="retakeBtn">Retake</button>
+            <button class="confirm" id="saveBtn">Save to ledger</button>
+          </div>
+          <p class="hint">Auto-framed to a standard bust shot. Drag the corners to zoom, the middle to reposition — the frame stays locked to that shape.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ROSTER PANEL -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Ledger</h2>
+        <div style="display:flex; gap:8px;">
+          <button class="subtle" id="exportCsvBtn">Export CSV</button>
+          <button class="subtle" id="exportZipBtn">Export photos (.zip)</button>
+        </div>
+      </div>
+      <div class="panel-body" style="padding-bottom:12px;">
+        <div class="field" style="margin-bottom:12px;">
+          <label for="winUsername">Windows username <span style="text-transform:none; font-weight:400; color:var(--muted);">(used to build the CSV "Photo" path)</span></label>
+          <input type="text" id="winUsername" placeholder="e.g. jsmith" autocomplete="off">
+        </div>
+        <div class="roster-controls">
+          <input type="text" id="searchInput" placeholder="Search by name or ID…">
+        </div>
+      </div>
+      <div class="roster-list" id="rosterList">
+        <div class="empty-state" id="emptyState">
+          <strong>No students saved yet</strong>
+          Take a photo, add an ID number and name, then save it here.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <p class="footer-note">Photos are auto-framed to a standard bust shot and compressed to roughly 200 KB before saving. Photos and names are stored privately in your browser for this app and never leave your device except when you export them.</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ---------- state ----------
+  var roster = [];            // [{id, name, thumb, ts}]
+  var currentStream = null;
+  var pendingCrop = { img: null, naturalW:0, naturalH:0 };
+  var storageOK = true;
+
+  // Standard "bust shot" ID-photo shape: portrait, head + shoulders/chest.
+  var CROP_ASPECT = 3 / 4; // width / height
+  // Target ceiling for the saved photo file size.
+  var TARGET_BYTES = 200 * 1024; // 200 KB
+
+  // ---------- element refs ----------
+  var video = document.getElementById('video');
+  var viewfinder = document.getElementById('viewfinder');
+  var vfMessage = document.getElementById('vfMessage');
+  var cameraSelect = document.getElementById('cameraSelect');
+  var shutterBtn = document.getElementById('shutterBtn');
+  var switchCamBtn = document.getElementById('switchCamBtn');
+  var liveControls = document.getElementById('liveControls');
+  var liveHint = document.getElementById('liveHint');
+
+  var cropStage = document.getElementById('cropStage');
+  var cropFrame = document.getElementById('cropFrame');
+  var capturedImg = document.getElementById('capturedImg');
+  var cropBox = document.getElementById('cropBox');
+  var retakeBtn = document.getElementById('retakeBtn');
+  var saveBtn = document.getElementById('saveBtn');
+
+  var studentIdInput = document.getElementById('studentId');
+  var studentFirstNameInput = document.getElementById('studentFirstName');
+  var studentLastNameInput = document.getElementById('studentLastName');
+  var dupWarn = document.getElementById('dupWarn');
+  var dupWarnText = document.getElementById('dupWarnText');
+  var dupOverwriteBtn = document.getElementById('dupOverwriteBtn');
+  var dupCancelBtn = document.getElementById('dupCancelBtn');
+
+  var rosterList = document.getElementById('rosterList');
+  var emptyState = document.getElementById('emptyState');
+  var rosterCount = document.getElementById('rosterCount');
+  var searchInput = document.getElementById('searchInput');
+  var winUsernameInput = document.getElementById('winUsername');
+  var exportCsvBtn = document.getElementById('exportCsvBtn');
+  var exportZipBtn = document.getElementById('exportZipBtn');
+  var toastEl = document.getElementById('toast');
+
+  var pendingOverwriteId = null;
+
+  // ---------- toast ----------
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 2600);
+  }
+
+  // ---------- local storage (IndexedDB) ----------
+  // This is a real standalone page (camera access requires that), so it
+  // uses the browser's own IndexedDB rather than any Claude-specific API.
+  // One object store, keyed by string: 'roster' holds the roster list,
+  // 'photo:<id>' holds each student's saved (already-compressed) photo.
+  var DB_NAME = 'idbooth-db';
+  var STORE = 'kv';
+  var _dbPromise = null;
+
+  function getDB(){
+    if (_dbPromise) return _dbPromise;
+    _dbPromise = new Promise(function(resolve, reject){
+      if (!window.indexedDB){ reject(new Error('IndexedDB unsupported')); return; }
+      var req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = function(){
+        if (!req.result.objectStoreNames.contains(STORE)){
+          req.result.createObjectStore(STORE, { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+    return _dbPromise;
+  }
+  function idbGet(key){
+    return getDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(key);
+        req.onsuccess = function(){ resolve(req.result ? req.result.value : null); };
+        req.onerror = function(){ reject(req.error); };
+      });
+    });
+  }
+  function idbSet(key, value){
+    return getDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put({ key: key, value: value });
+        tx.oncomplete = function(){ resolve(true); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+  function idbDelete(key){
+    return getDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).delete(key);
+        tx.oncomplete = function(){ resolve(true); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+
+  // ---------- storage helpers ----------
+  async function loadRoster(){
+    try{
+      var val = await idbGet('roster');
+      roster = val ? JSON.parse(val) : [];
+    }catch(e){
+      roster = [];
+    }
+    renderRoster();
+  }
+  async function persistRoster(){
+    try{
+      await idbSet('roster', JSON.stringify(roster));
+    }catch(e){
+      storageOK = false;
+      toast('Could not save the ledger — local storage may be full, disabled, or blocked (e.g. private browsing).');
+    }
+  }
+  async function savePhoto(id, dataUrl){
+    try{
+      await idbSet('photo:' + id, dataUrl);
+      return true;
+    }catch(e){
+      toast('Could not save the photo to local storage.');
+      return false;
+    }
+  }
+  async function getPhoto(id){
+    try{
+      return await idbGet('photo:' + id);
+    }catch(e){
+      return null;
+    }
+  }
+  async function deletePhotoKey(id){
+    try{ await idbDelete('photo:' + id); }catch(e){}
+  }
+  async function loadSettings(){
+    try{
+      var val = await idbGet('settings');
+      var settings = val ? JSON.parse(val) : {};
+      winUsernameInput.value = settings.winUsername || '';
+    }catch(e){ /* ignore — field just stays blank */ }
+  }
+  async function saveSettings(){
+    try{
+      await idbSet('settings', JSON.stringify({ winUsername: winUsernameInput.value.trim() }));
+    }catch(e){ /* non-critical, ignore */ }
+  }
+  winUsernameInput.addEventListener('change', saveSettings);
+
+  // ---------- camera ----------
+  var frameWatchdog = null;
+
+  async function listCameras(selectedId){
+    try{
+      var devices = await navigator.mediaDevices.enumerateDevices();
+      var cams = devices.filter(function(d){ return d.kind === 'videoinput'; });
+      cameraSelect.innerHTML = '';
+      cams.forEach(function(cam, i){
+        var opt = document.createElement('option');
+        opt.value = cam.deviceId;
+        opt.textContent = cam.label || ('Camera ' + (i+1));
+        if (cam.deviceId === selectedId) opt.selected = true;
+        cameraSelect.appendChild(opt);
+      });
+      if (cams.length === 0){
+        var opt = document.createElement('option');
+        opt.textContent = 'No cameras found';
+        cameraSelect.appendChild(opt);
+      }
+    }catch(e){ /* ignore, labels need permission first */ }
+  }
+
+  function stopStream(){
+    if (currentStream){
+      currentStream.getTracks().forEach(function(t){ t.stop(); });
+      currentStream = null;
+    }
+  }
+
+  function showVfMessage(html){
+    vfMessage.innerHTML = html;
+    vfMessage.style.display = 'flex';
+    video.style.display = 'none';
+  }
+  function hideVfMessage(){
+    vfMessage.style.display = 'none';
+    video.style.display = 'block';
+  }
+
+  async function startCamera(deviceId){
+    stopStream();
+    if (frameWatchdog){ clearTimeout(frameWatchdog); frameWatchdog = null; }
+    var constraints = {
+      video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' },
+      audio: false
+    };
+    try{
+      var stream = await navigator.mediaDevices.getUserMedia(constraints);
+      currentStream = stream;
+      video.srcObject = stream;
+      hideVfMessage();
+      shutterBtn.disabled = false;
+      var track = stream.getVideoTracks()[0];
+      var settings = track.getSettings ? track.getSettings() : {};
+      await listCameras(settings.deviceId);
+
+      // The permission/stream can succeed while the camera itself never
+      // actually delivers frames (commonly: it's already in use by
+      // another app or tab). Catch that instead of leaving a silent
+      // black box.
+      var onFirstFrame = function(){
+        if (frameWatchdog){ clearTimeout(frameWatchdog); frameWatchdog = null; }
+        video.removeEventListener('loadeddata', onFirstFrame);
+      };
+      video.addEventListener('loadeddata', onFirstFrame);
+      frameWatchdog = setTimeout(function(){
+        video.removeEventListener('loadeddata', onFirstFrame);
+        if (!video.videoWidth){
+          shutterBtn.disabled = true;
+          showVfMessage(
+            '<div>The camera connected, but no video is coming through. ' +
+            'It may already be in use by another app or browser tab — close those, then retry.</div>' +
+            '<button class="ghost" id="retryCamBtn">Retry</button>'
+          );
+          var retryBtn = document.getElementById('retryCamBtn');
+          if (retryBtn) retryBtn.addEventListener('click', function(){ startCamera(cameraSelect.value || null); });
+        }
+      }, 4000);
+    }catch(err){
+      shutterBtn.disabled = true;
+      var msg;
+      if (err && err.name === 'NotAllowedError'){
+        msg = 'Camera access was denied. Allow camera permission in your browser, then retry.';
+      } else if (err && err.name === 'NotFoundError'){
+        msg = 'No camera was detected on this device.';
+      } else {
+        msg = 'Could not start the camera (' + (err && err.message ? err.message : 'unknown error') + ').';
+      }
+      showVfMessage(
+        '<div>' + msg + '</div><button class="ghost" id="retryCamBtn">Retry</button>'
+      );
+      var retryBtn = document.getElementById('retryCamBtn');
+      if (retryBtn) retryBtn.addEventListener('click', function(){ startCamera(cameraSelect.value || null); });
+    }
+  }
+
+  cameraSelect.addEventListener('change', function(){
+    startCamera(cameraSelect.value || null);
+  });
+  switchCamBtn.addEventListener('click', function(){ startCamera(cameraSelect.value || null); });
+
+  // ---------- capture ----------
+  shutterBtn.addEventListener('click', function(){
+    if (!video.videoWidth) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    enterCropStage(dataUrl, canvas.width, canvas.height);
+  });
+
+  function enterCropStage(dataUrl, w, h){
+    pendingCrop.naturalW = w;
+    pendingCrop.naturalH = h;
+    capturedImg.src = dataUrl;
+    viewfinder.style.display = 'none';
+    liveControls.style.display = 'none';
+    liveHint.style.display = 'none';
+    cropStage.style.display = 'block';
+    capturedImg.onload = function(){ autoFrameCropBox(); };
+  }
+
+  function exitCropStage(){
+    cropStage.style.display = 'none';
+    viewfinder.style.display = 'block';
+    liveControls.style.display = 'flex';
+    liveHint.style.display = 'block';
+  }
+
+  retakeBtn.addEventListener('click', function(){ exitCropStage(); });
+
+  // ---------- crop box interaction ----------
+  // cropRect is in displayed (client) pixels, relative to the image.
+  // naturalCropRect mirrors it in the photo's true pixel space and is the
+  // source of truth across window resizes / re-renders.
+  var cropRect = { x:0, y:0, w:0, h:0 };
+  var naturalCropRect = null;
+
+  // Try to auto-frame on the detected face; otherwise fall back to a
+  // centered default that assumes the photographer used the viewfinder
+  // guide to roughly center the student.
+  async function autoFrameCropBox(){
+    var rect = null;
+    if ('FaceDetector' in window){
+      try{
+        var detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+        var faces = await detector.detect(capturedImg);
+        if (faces && faces.length){
+          rect = frameAroundFace(faces[0].boundingBox);
+        }
+      }catch(e){ /* detector unsupported/failed — use the fallback below */ }
+    }
+    if (!rect) rect = defaultFrame();
+    naturalCropRect = rect;
+    syncDisplayFromNatural();
+  }
+
+  // Frame a standard bust shot around a detected face box (natural pixels):
+  // headroom above the crown, and enough width/height for shoulders/chest.
+  function frameAroundFace(box){
+    var cropH = box.height / 0.42;      // face height ≈ 42% of the bust-shot frame
+    var cropW = cropH * CROP_ASPECT;
+    var headroom = cropH * 0.10;        // small gap above the top of the head
+    var cx = box.x + box.width / 2;
+    var top = box.y - headroom;
+    return clampNaturalRect(cx - cropW / 2, top, cropW, cropH);
+  }
+
+  function defaultFrame(){
+    var w = pendingCrop.naturalW, h = pendingCrop.naturalH;
+    var cropH = h * 0.82;
+    var cropW = cropH * CROP_ASPECT;
+    if (cropW > w * 0.92){ cropW = w * 0.92; cropH = cropW / CROP_ASPECT; }
+    var cropX = (w - cropW) / 2;
+    var cropY = h * 0.05; // slight bias toward the upper frame, where heads usually sit
+    return clampNaturalRect(cropX, cropY, cropW, cropH);
+  }
+
+  function clampNaturalRect(x, y, w, h){
+    var W = pendingCrop.naturalW, H = pendingCrop.naturalH;
+    w = Math.min(w, W); h = Math.min(h, H);
+    x = Math.max(0, Math.min(x, W - w));
+    y = Math.max(0, Math.min(y, H - h));
+    return { x:x, y:y, w:w, h:h };
+  }
+
+  function syncDisplayFromNatural(){
+    var dispW = capturedImg.clientWidth;
+    var scale = dispW / pendingCrop.naturalW;
+    cropRect = {
+      x: naturalCropRect.x * scale,
+      y: naturalCropRect.y * scale,
+      w: naturalCropRect.w * scale,
+      h: naturalCropRect.h * scale
+    };
+    applyCropRectToDom();
+  }
+
+  function syncNaturalFromDisplay(){
+    var dispW = capturedImg.clientWidth;
+    var scale = pendingCrop.naturalW / dispW;
+    naturalCropRect = {
+      x: cropRect.x * scale, y: cropRect.y * scale,
+      w: cropRect.w * scale, h: cropRect.h * scale
+    };
+  }
+
+  function applyCropRectToDom(){
+    cropBox.style.left = cropRect.x + 'px';
+    cropBox.style.top = cropRect.y + 'px';
+    cropBox.style.width = cropRect.w + 'px';
+    cropBox.style.height = cropRect.h + 'px';
+  }
+
+  var dragMode = null; // 'move' | 'nw' | 'ne' | 'sw' | 'se'
+  var dragStart = null;
+
+  function pointerPos(e){
+    var rect = capturedImg.getBoundingClientRect();
+    var frameRect = cropFrame.getBoundingClientRect();
+    var offsetX = rect.left - frameRect.left;
+    var offsetY = rect.top - frameRect.top;
+    return { x: e.clientX - frameRect.left - offsetX, y: e.clientY - frameRect.top - offsetY };
+  }
+
+  function startDrag(mode){
+    return function(e){
+      e.preventDefault();
+      dragMode = mode;
+      dragStart = { pointer: pointerPos(e), rect: Object.assign({}, cropRect) };
+      window.addEventListener('pointermove', onDrag);
+      window.addEventListener('pointerup', endDrag);
+    };
+  }
+
+  // The crop box always keeps the CROP_ASPECT ratio: moving just
+  // translates it, resizing scales width+height together from the
+  // opposite corner so the standard bust-shot frame is preserved.
+  function onDrag(e){
+    if (!dragMode) return;
+    var p = pointerPos(e);
+    var dx = p.x - dragStart.pointer.x;
+    var dy = p.y - dragStart.pointer.y;
+    var r = dragStart.rect;
+    var dispW = capturedImg.clientWidth;
+    var dispH = capturedImg.clientHeight;
+
+    if (dragMode === 'move'){
+      cropRect.x = Math.max(0, Math.min(r.x + dx, dispW - r.w));
+      cropRect.y = Math.max(0, Math.min(r.y + dy, dispH - r.h));
+      cropRect.w = r.w;
+      cropRect.h = r.h;
+    } else {
+      var anchorX, anchorY, newW;
+      if (dragMode === 'se'){ anchorX = r.x; anchorY = r.y; newW = r.w + dx; }
+      else if (dragMode === 'sw'){ anchorX = r.x + r.w; anchorY = r.y; newW = r.w - dx; }
+      else if (dragMode === 'ne'){ anchorX = r.x; anchorY = r.y + r.h; newW = r.w + dx; }
+      else { anchorX = r.x + r.w; anchorY = r.y + r.h; newW = r.w - dx; } // nw
+
+      newW = Math.max(60, newW);
+      var newH = newW / CROP_ASPECT;
+      if (newH > dispH){ newH = dispH; newW = newH * CROP_ASPECT; }
+      if (newW > dispW){ newW = dispW; newH = newW / CROP_ASPECT; }
+
+      if (dragMode === 'se'){ cropRect.x = anchorX; cropRect.y = anchorY; }
+      else if (dragMode === 'sw'){ cropRect.x = anchorX - newW; cropRect.y = anchorY; }
+      else if (dragMode === 'ne'){ cropRect.x = anchorX; cropRect.y = anchorY - newH; }
+      else { cropRect.x = anchorX - newW; cropRect.y = anchorY - newH; }
+      cropRect.w = newW;
+      cropRect.h = newH;
+      cropRect.x = Math.max(0, Math.min(cropRect.x, dispW - cropRect.w));
+      cropRect.y = Math.max(0, Math.min(cropRect.y, dispH - cropRect.h));
+    }
+    applyCropRectToDom();
+  }
+  function endDrag(){
+    dragMode = null;
+    syncNaturalFromDisplay();
+    window.removeEventListener('pointermove', onDrag);
+    window.removeEventListener('pointerup', endDrag);
+  }
+
+  cropBox.addEventListener('pointerdown', function(e){
+    if (e.target.classList.contains('crop-handle')) return;
+    startDrag('move')(e);
+  });
+  cropBox.querySelector('.nw').addEventListener('pointerdown', startDrag('nw'));
+  cropBox.querySelector('.ne').addEventListener('pointerdown', startDrag('ne'));
+  cropBox.querySelector('.sw').addEventListener('pointerdown', startDrag('sw'));
+  cropBox.querySelector('.se').addEventListener('pointerdown', startDrag('se'));
+
+  window.addEventListener('resize', function(){
+    if (cropStage.style.display === 'block' && naturalCropRect) syncDisplayFromNatural();
+  });
+
+  function getCroppedDataUrl(maxDim){
+    var dispW = capturedImg.clientWidth;
+    var scale = pendingCrop.naturalW / dispW;
+    var sx = cropRect.x * scale;
+    var sy = cropRect.y * scale;
+    var sw = cropRect.w * scale;
+    var sh = cropRect.h * scale;
+
+    var outW = sw, outH = sh;
+    if (maxDim && Math.max(outW, outH) > maxDim){
+      var ratio = maxDim / Math.max(outW, outH);
+      outW = outW * ratio;
+      outH = outH * ratio;
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(outW);
+    canvas.height = Math.round(outH);
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(capturedImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.9);
+  }
+
+  function dataUrlBytes(dataUrl){
+    var base64 = dataUrl.split(',')[1] || '';
+    return Math.round(base64.length * 0.75);
+  }
+
+  // Crops to the current box, then steps down quality and — if that's not
+  // enough — resolution, until the JPEG fits under targetBytes (or gives up
+  // at minDim as a floor so photos never get illegibly small).
+  function compressCroppedPhoto(targetBytes, maxDim, minDim){
+    var dispW = capturedImg.clientWidth;
+    var scale = pendingCrop.naturalW / dispW;
+    var sx = cropRect.x * scale, sy = cropRect.y * scale;
+    var sw = cropRect.w * scale, sh = cropRect.h * scale;
+
+    var outW = sw, outH = sh;
+    if (maxDim && Math.max(outW, outH) > maxDim){
+      var r = maxDim / Math.max(outW, outH);
+      outW *= r; outH *= r;
+    }
+
+    var qualities = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4];
+    var dataUrl, bytes;
+    for (var attempt = 0; attempt < 8; attempt++){
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(outW));
+      canvas.height = Math.max(1, Math.round(outH));
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(capturedImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+      for (var qi = 0; qi < qualities.length; qi++){
+        dataUrl = canvas.toDataURL('image/jpeg', qualities[qi]);
+        bytes = dataUrlBytes(dataUrl);
+        if (bytes <= targetBytes) return { dataUrl: dataUrl, bytes: bytes };
+      }
+      if (Math.max(outW, outH) <= (minDim || 320)) break;
+      outW *= 0.85; outH *= 0.85;
+    }
+    return { dataUrl: dataUrl, bytes: bytes }; // best effort — smallest we could get
+  }
+
+  // ---------- save flow ----------
+  function currentFormValid(){
+    return studentIdInput.value.trim().length > 0 &&
+      studentFirstNameInput.value.trim().length > 0 &&
+      studentLastNameInput.value.trim().length > 0;
+  }
+
+  saveBtn.addEventListener('click', function(){
+    var id = studentIdInput.value.trim();
+    var firstName = studentFirstNameInput.value.trim();
+    var lastName = studentLastNameInput.value.trim();
+    if (!id || !firstName || !lastName){
+      toast('Enter an ID number, first name, and last name before saving.');
+      return;
+    }
+    var existing = roster.find(function(r){ return r.id === id; });
+    if (existing && existing.id !== pendingOverwriteId){
+      dupWarnText.textContent = 'ID ' + id + ' is already saved for "' + existing.firstName + ' ' + existing.lastName + '".';
+      dupWarn.classList.add('show');
+      return;
+    }
+    doSave(id, firstName, lastName);
+  });
+
+  dupCancelBtn.addEventListener('click', function(){
+    dupWarn.classList.remove('show');
+    pendingOverwriteId = null;
+  });
+  dupOverwriteBtn.addEventListener('click', function(){
+    var id = studentIdInput.value.trim();
+    var firstName = studentFirstNameInput.value.trim();
+    var lastName = studentLastNameInput.value.trim();
+    pendingOverwriteId = id;
+    dupWarn.classList.remove('show');
+    doSave(id, firstName, lastName);
+  });
+
+  async function doSave(id, firstName, lastName){
+    var thumb = getCroppedDataUrl(110);
+    var compressed = compressCroppedPhoto(TARGET_BYTES, 1100, 320);
+    var fullRes = compressed.dataUrl;
+
+    var ok = await savePhoto(id, fullRes);
+    if (!ok) return;
+
+    var idx = roster.findIndex(function(r){ return r.id === id; });
+    var entry = { id: id, firstName: firstName, lastName: lastName, thumb: thumb, ts: Date.now() };
+    if (idx >= 0) roster[idx] = entry; else roster.push(entry);
+    await persistRoster();
+    renderRoster();
+
+    var kb = Math.max(1, Math.round(compressed.bytes / 1024));
+    toast('Saved ' + firstName + ' ' + lastName + ' (ID ' + id + ') — ' + kb + ' KB');
+    pendingOverwriteId = null;
+    studentIdInput.value = '';
+    studentFirstNameInput.value = '';
+    studentLastNameInput.value = '';
+    exitCropStage();
+    studentIdInput.focus();
+  }
+
+  // ---------- delete ----------
+  async function deleteEntry(id){
+    roster = roster.filter(function(r){ return r.id !== id; });
+    await persistRoster();
+    await deletePhotoKey(id);
+    renderRoster();
+    toast('Removed from ledger.');
+  }
+
+  // ---------- roster rendering ----------
+  function letterOf(lastName){
+    var c = (lastName || '').trim().charAt(0).toUpperCase();
+    return /[A-Z]/.test(c) ? c : '#';
+  }
+  function displayName(entry){
+    return entry.firstName + ' ' + entry.lastName;
+  }
+
+  function renderRoster(){
+    var query = searchInput.value.trim().toLowerCase();
+    var filtered = roster.filter(function(r){
+      if (!query) return true;
+      return r.firstName.toLowerCase().indexOf(query) !== -1 ||
+        r.lastName.toLowerCase().indexOf(query) !== -1 ||
+        r.id.toLowerCase().indexOf(query) !== -1;
+    });
+    filtered.sort(function(a,b){
+      return a.lastName.localeCompare(b.lastName, undefined, {sensitivity:'base'}) ||
+        a.firstName.localeCompare(b.firstName, undefined, {sensitivity:'base'});
+    });
+
+    rosterCount.textContent = roster.length + (roster.length === 1 ? ' student saved' : ' students saved');
+
+    rosterList.innerHTML = '';
+    if (filtered.length === 0){
+      var empty = document.createElement('div');
+      empty.className = 'empty-state';
+      if (roster.length === 0){
+        empty.innerHTML = '<strong>No students saved yet</strong>Take a photo, add an ID number and name, then save it here.';
+      } else {
+        empty.innerHTML = '<strong>No matches</strong>Try a different name or ID.';
+      }
+      rosterList.appendChild(empty);
+      return;
+    }
+
+    var lastLetter = null;
+    filtered.forEach(function(entry){
+      var letter = letterOf(entry.lastName);
+      if (letter !== lastLetter){
+        var tab = document.createElement('div');
+        tab.className = 'letter-tab';
+        tab.textContent = letter;
+        rosterList.appendChild(tab);
+        lastLetter = letter;
+      }
+      var row = document.createElement('div');
+      row.className = 'roster-row';
+
+      var img = document.createElement('img');
+      img.className = 'roster-thumb';
+      img.src = entry.thumb;
+      img.alt = displayName(entry);
+      row.appendChild(img);
+
+      var meta = document.createElement('div');
+      meta.className = 'roster-meta';
+      var nameEl = document.createElement('div');
+      nameEl.className = 'name';
+      nameEl.textContent = displayName(entry);
+      var idEl = document.createElement('div');
+      idEl.className = 'id';
+      idEl.textContent = 'ID ' + entry.id;
+      meta.appendChild(nameEl);
+      meta.appendChild(idEl);
+      row.appendChild(meta);
+
+      var actions = document.createElement('div');
+      actions.className = 'roster-actions';
+
+      var dlBtn = document.createElement('button');
+      dlBtn.className = 'subtle';
+      dlBtn.textContent = 'Download';
+      dlBtn.addEventListener('click', async function(){
+        var full = await getPhoto(entry.id);
+        if (!full){ toast('Could not load the saved photo.'); return; }
+        var checked = await ensureUnderTarget(full, TARGET_BYTES, 320);
+        var a = document.createElement('a');
+        a.href = checked;
+        a.download = entry.id + '.jpg';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'danger-text';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', function(){
+        if (confirm('Remove ' + displayName(entry) + ' (ID ' + entry.id + ') from the ledger?')){
+          deleteEntry(entry.id);
+        }
+      });
+
+      actions.appendChild(dlBtn);
+      actions.appendChild(delBtn);
+      row.appendChild(actions);
+
+      rosterList.appendChild(row);
+    });
+  }
+
+  function loadImageFromDataUrl(dataUrl){
+    return new Promise(function(resolve, reject){
+      var img = new Image();
+      img.onload = function(){ resolve(img); };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+
+  // Re-verifies (and if needed, re-compresses) a single already-saved photo
+  // independently of any other photo — used at export time so every file
+  // in the batch is individually guaranteed to be under targetBytes, even
+  // if it was saved by an older version or hit an edge case at save time.
+  async function ensureUnderTarget(dataUrl, targetBytes, minDim){
+    if (dataUrlBytes(dataUrl) <= targetBytes) return dataUrl;
+    var img = await loadImageFromDataUrl(dataUrl);
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var qualities = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
+    for (var attempt = 0; attempt < 8; attempt++){
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(w));
+      canvas.height = Math.max(1, Math.round(h));
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      for (var qi = 0; qi < qualities.length; qi++){
+        var out = canvas.toDataURL('image/jpeg', qualities[qi]);
+        if (dataUrlBytes(out) <= targetBytes) return out;
+      }
+      if (Math.max(w, h) <= (minDim || 320)) return out;
+      w *= 0.85; h *= 0.85;
+    }
+    return dataUrl; // fallback — shouldn't normally reach here
+  }
+
+  searchInput.addEventListener('input', renderRoster);
+
+  // ---------- exports ----------
+  function sortByLastName(list){
+    return list.slice().sort(function(a,b){
+      return a.lastName.localeCompare(b.lastName, undefined, {sensitivity:'base'}) ||
+        a.firstName.localeCompare(b.firstName, undefined, {sensitivity:'base'});
+    });
+  }
+
+  exportCsvBtn.addEventListener('click', function(){
+    if (roster.length === 0){ toast('No students to export yet.'); return; }
+    var username = winUsernameInput.value.trim();
+    if (!username){
+      toast('Enter the Windows username above first, so the Photo column can be filled in.');
+      winUsernameInput.focus();
+      return;
+    }
+    var rows = [['ID Number','First Name','Last Name','Title','Level','Photo']];
+    sortByLastName(roster).forEach(function(r){
+      var photoPath = 'C:\\Users\\' + username + '\\Downloads\\student_photos\\' + r.id + '.jpg';
+      rows.push([r.id, r.firstName, r.lastName, 'Student', '1', photoPath]);
+    });
+    var csv = rows.map(function(r){
+      return r.map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; }).join(',');
+    }).join('\r\n');
+    var blob = new Blob([csv], { type:'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'student_roster.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  exportZipBtn.addEventListener('click', async function(){
+    if (roster.length === 0){ toast('No students to export yet.'); return; }
+    if (typeof JSZip === 'undefined'){ toast('Zip export library failed to load — check your connection.'); return; }
+    exportZipBtn.disabled = true;
+    exportZipBtn.textContent = 'Preparing…';
+    try{
+      var zip = new JSZip();
+      var sorted = sortByLastName(roster);
+      var reCompressedCount = 0;
+      for (var i=0; i<sorted.length; i++){
+        var entry = sorted[i];
+        var full = await getPhoto(entry.id);
+        if (!full) continue;
+        var before = dataUrlBytes(full);
+        var checked = await ensureUnderTarget(full, TARGET_BYTES, 320);
+        if (dataUrlBytes(checked) < before) reCompressedCount++;
+        var base64 = checked.split(',')[1];
+        zip.file(entry.id + '.jpg', base64, { base64: true });
+      }
+      var blob = await zip.generateAsync({ type:'blob' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'student_photos.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      if (reCompressedCount > 0){
+        toast(reCompressedCount + ' photo(s) were re-compressed on export to stay under 200 KB.');
+      }
+    } catch(e){
+      toast('Export failed: ' + e.message);
+    } finally {
+      exportZipBtn.disabled = false;
+      exportZipBtn.textContent = 'Export photos (.zip)';
+    }
+  });
+
+  // ---------- init ----------
+  (async function init(){
+    await loadRoster();
+    await loadSettings();
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      await startCamera(null);
+    } else {
+      showVfMessage('<div>This browser does not support camera access.</div>');
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>
