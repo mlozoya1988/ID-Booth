@@ -324,29 +324,6 @@
   .warn-box.show{display:block;}
 
   /* ---- roster panel ---- */
-  .roster-controls{
-    display:flex;
-    gap:10px;
-    align-items:center;
-  }
-  .roster-controls input[type=text]{
-    flex:1;
-    padding:8px 10px;
-    border:1px solid var(--border);
-    border-radius:6px;
-    font-size:13px;
-    font-family:var(--sans);
-    background:#FAFBFC;
-  }
-  .roster-controls input[type=text]:focus{outline:none; border-color:var(--accent); background:#fff;}
-
-  .merge-row{
-    display:flex;
-    gap:8px;
-    margin-top:12px;
-    flex-wrap:wrap;
-  }
-
   .roster-list{
     max-height:640px;
     overflow-y:auto;
@@ -516,23 +493,9 @@
       </div>
       <div class="panel-body" style="padding-bottom:12px;">
         <div class="field" style="margin-bottom:12px;">
-          <label for="winUsername">Windows username <span style="text-transform:none; font-weight:400; color:var(--muted);">(used to build the CSV "Photo" path)</span></label>
-          <input type="text" id="winUsername" placeholder="e.g. jsmith" autocomplete="off">
+          <label for="searchInput">Search</label>
+          <input type="text" id="searchInput" placeholder="Search by name or ID…" autocomplete="off">
         </div>
-        <div class="roster-controls">
-          <input type="text" id="searchInput" placeholder="Search by name or ID…">
-        </div>
-        <div class="merge-row">
-          <button class="subtle" id="exportContribBtn">Download backup (.json)</button>
-          <button class="subtle" id="importContribBtn">Import entries…</button>
-          <input type="file" id="importContribInput" accept=".json,application/json" multiple style="display:none;">
-        </div>
-        <p class="hint" style="text-align:left; margin-top:8px;">
-          The ledger is shared and live — everyone who opens this page sees the same entries,
-          updated automatically as photos are saved. Use <strong>Download backup</strong> for a
-          snapshot of everything (entries + photos) in one file, and <strong>Import entries</strong>
-          to merge a backup or files exported from the old offline version into the shared ledger.
-        </p>
       </div>
       <div class="roster-list" id="rosterList">
         <div class="empty-state" id="emptyState">
@@ -609,12 +572,8 @@
   var rosterCount = document.getElementById('rosterCount');
   var connStatus = document.getElementById('connStatus');
   var searchInput = document.getElementById('searchInput');
-  var winUsernameInput = document.getElementById('winUsername');
   var exportCsvBtn = document.getElementById('exportCsvBtn');
   var exportZipBtn = document.getElementById('exportZipBtn');
-  var exportContribBtn = document.getElementById('exportContribBtn');
-  var importContribBtn = document.getElementById('importContribBtn');
-  var importContribInput = document.getElementById('importContribInput');
   var toastEl = document.getElementById('toast');
 
   var pendingOverwriteId = null;
@@ -717,15 +676,19 @@
     try{ await db.collection('photos').doc(id).delete(); }catch(e){}
   }
 
-  // The Windows-username field is a per-coordinator preference, not shared
-  // data, so it stays on this device only.
-  function loadSettings(){
-    try{ winUsernameInput.value = localStorage.getItem('idbooth-winUsername') || ''; }catch(e){}
+  // The Windows username is asked for via a prompt when exporting the CSV.
+  // The last answer is remembered on this device so it only needs typing once.
+  function askWinUsername(){
+    var saved = '';
+    try{ saved = localStorage.getItem('idbooth-winUsername') || ''; }catch(e){}
+    var answer = window.prompt('Windows username — used to build the CSV "Photo" path.', saved);
+    if (answer === null) return null; // user cancelled
+    answer = answer.trim();
+    if (answer){
+      try{ localStorage.setItem('idbooth-winUsername', answer); }catch(e){}
+    }
+    return answer;
   }
-  function saveSettings(){
-    try{ localStorage.setItem('idbooth-winUsername', winUsernameInput.value.trim()); }catch(e){}
-  }
-  winUsernameInput.addEventListener('change', saveSettings);
 
   // ---------- camera ----------
   var frameWatchdog = null;
@@ -1317,10 +1280,10 @@
 
   exportCsvBtn.addEventListener('click', function(){
     if (roster.length === 0){ toast('No students to export yet.'); return; }
-    var username = winUsernameInput.value.trim();
+    var username = askWinUsername();
+    if (username === null) return; // cancelled — no export
     if (!username){
-      toast('Enter the Windows username above first, so the Photo column can be filled in.');
-      winUsernameInput.focus();
+      toast('Export cancelled — a Windows username is needed to build the CSV "Photo" path.');
       return;
     }
     var rows = [['ID Number','First Name','Last Name','Title','Level','Photo']];
@@ -1378,144 +1341,6 @@
     } finally {
       exportZipBtn.disabled = false;
       exportZipBtn.textContent = 'Export photos (.zip)';
-    }
-  });
-
-  // ---------- backup + import (merge into the shared ledger) ----------
-  // The ledger itself is shared and live, so day-to-day teamwork needs no
-  // file passing. These two buttons remain useful for:
-  //   • Backup — download a snapshot of the whole shared ledger (entries +
-  //     full photos) as one .json file, e.g. before end-of-year cleanup.
-  //   • Import — merge a backup file, or entry files exported from the old
-  //     offline version of this app, into the shared ledger. Conflicts on
-  //     the same ID keep whichever entry was saved most recently.
-  var CONTRIB_FORMAT = 'idbooth-contribution';
-  var CONTRIB_VERSION = 1;
-
-  function timestampSlug(){
-    var d = new Date();
-    function p(n){ return (n < 10 ? '0' : '') + n; }
-    return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
-  }
-
-  exportContribBtn.addEventListener('click', async function(){
-    if (roster.length === 0){ toast('No students to back up yet.'); return; }
-    exportContribBtn.disabled = true;
-    exportContribBtn.textContent = 'Preparing…';
-    try{
-      var entries = [];
-      for (var i = 0; i < roster.length; i++){
-        var r = roster[i];
-        var photo = await getPhoto(r.id);
-        entries.push({
-          id: r.id,
-          firstName: r.firstName,
-          lastName: r.lastName,
-          ts: r.ts || 0,
-          thumb: r.thumb,
-          photo: photo || null
-        });
-      }
-      var payload = {
-        format: CONTRIB_FORMAT,
-        version: CONTRIB_VERSION,
-        exportedAt: new Date().toISOString(),
-        entries: entries
-      };
-      var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'idbooth-backup-' + timestampSlug() + '.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast('Backed up ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') + ' from the shared ledger.');
-    } catch(e){
-      toast('Backup failed: ' + e.message);
-    } finally {
-      exportContribBtn.disabled = false;
-      exportContribBtn.textContent = 'Download backup (.json)';
-    }
-  });
-
-  importContribBtn.addEventListener('click', function(){
-    importContribInput.value = ''; // allow re-selecting the same files
-    importContribInput.click();
-  });
-
-  function readFileAsText(file){
-    return new Promise(function(resolve, reject){
-      var reader = new FileReader();
-      reader.onload = function(){ resolve(reader.result); };
-      reader.onerror = function(){ reject(new Error('Could not read ' + file.name)); };
-      reader.readAsText(file);
-    });
-  }
-
-  importContribInput.addEventListener('change', async function(){
-    var files = Array.from(importContribInput.files || []);
-    if (files.length === 0) return;
-    if (!db){ toast('Not connected to the shared ledger — check your connection and refresh.'); return; }
-    importContribBtn.disabled = true;
-    importContribBtn.textContent = 'Importing…';
-
-    var added = 0, updated = 0, skipped = 0, badFiles = [];
-    try{
-      for (var f = 0; f < files.length; f++){
-        var data;
-        try{
-          data = JSON.parse(await readFileAsText(files[f]));
-        } catch(e){
-          badFiles.push(files[f].name);
-          continue;
-        }
-        if (!data || data.format !== CONTRIB_FORMAT || !Array.isArray(data.entries)){
-          badFiles.push(files[f].name);
-          continue;
-        }
-        for (var i = 0; i < data.entries.length; i++){
-          var entry = data.entries[i];
-          if (!entry || !entry.id || !entry.firstName || !entry.lastName) continue;
-          var id = String(entry.id).trim();
-          var incoming = {
-            firstName: String(entry.firstName).trim(),
-            lastName: String(entry.lastName).trim(),
-            thumb: entry.thumb || '',
-            ts: entry.ts || 0
-          };
-          var existing = roster.find(function(r){ return r.id === id; });
-          if (existing){
-            // Same ID already in the shared ledger: keep the most recent.
-            if ((incoming.ts || 0) > (existing.ts || 0)){
-              if (entry.photo) await savePhoto(id, entry.photo);
-              await saveEntry(id, incoming);
-              updated++;
-            } else {
-              skipped++;
-            }
-          } else {
-            if (entry.photo) await savePhoto(id, entry.photo);
-            await saveEntry(id, incoming);
-            added++;
-          }
-        }
-      }
-
-      var parts = [];
-      if (added) parts.push(added + ' added');
-      if (updated) parts.push(updated + ' updated (newer photo kept)');
-      if (skipped) parts.push(skipped + ' skipped (the shared ledger already had a newer copy)');
-      if (parts.length === 0) parts.push('nothing new to merge');
-      var msg = 'Import finished: ' + parts.join(', ') + '.';
-      if (badFiles.length) msg += ' Ignored ' + badFiles.length + ' file(s) that were not ID Booth exports.';
-      toast(msg);
-    } catch(e){
-      toast('Import failed: ' + e.message);
-    } finally {
-      importContribBtn.disabled = false;
-      importContribBtn.textContent = 'Import entries…';
     }
   });
 
