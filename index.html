@@ -71,6 +71,41 @@
     font-size:13px;
     color:var(--muted);
   }
+  .conn{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:4px 10px 4px 22px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:var(--panel);
+    color:var(--muted);
+    position:relative;
+  }
+  .conn::before{
+    content:'';
+    position:absolute;
+    left:9px;
+    top:50%;
+    transform:translateY(-50%);
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#B8BDC4;
+  }
+  .conn.live{color:var(--confirm); border-color:#BFD8CB;}
+  .conn.live::before{background:var(--confirm);}
+  .conn.connecting::before{background:#D9A441; animation:connPulse 1.2s ease-in-out infinite;}
+  .conn.error{color:var(--danger); border-color:#E4B7B4;}
+  .conn.error::before{background:var(--danger);}
+  @keyframes connPulse{
+    0%,100%{opacity:.35;}
+    50%{opacity:1;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .conn.connecting::before{animation:none;}
+  }
   .grid{
     display:grid;
     grid-template-columns:minmax(0,420px) 1fr;
@@ -305,6 +340,13 @@
   }
   .roster-controls input[type=text]:focus{outline:none; border-color:var(--accent); background:#fff;}
 
+  .merge-row{
+    display:flex;
+    gap:8px;
+    margin-top:12px;
+    flex-wrap:wrap;
+  }
+
   .roster-list{
     max-height:640px;
     overflow-y:auto;
@@ -388,7 +430,10 @@
       <h1>ID Booth</h1>
       <span class="stamp">Student Photo Ledger</span>
     </div>
-    <span class="count" id="rosterCount">0 students saved</span>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span class="conn connecting" id="connStatus">Connecting…</span>
+      <span class="count" id="rosterCount">0 students saved</span>
+    </div>
   </header>
 
   <div class="grid">
@@ -477,6 +522,17 @@
         <div class="roster-controls">
           <input type="text" id="searchInput" placeholder="Search by name or ID…">
         </div>
+        <div class="merge-row">
+          <button class="subtle" id="exportContribBtn">Download backup (.json)</button>
+          <button class="subtle" id="importContribBtn">Import entries…</button>
+          <input type="file" id="importContribInput" accept=".json,application/json" multiple style="display:none;">
+        </div>
+        <p class="hint" style="text-align:left; margin-top:8px;">
+          The ledger is shared and live — everyone who opens this page sees the same entries,
+          updated automatically as photos are saved. Use <strong>Download backup</strong> for a
+          snapshot of everything (entries + photos) in one file, and <strong>Import entries</strong>
+          to merge a backup or files exported from the old offline version into the shared ledger.
+        </p>
       </div>
       <div class="roster-list" id="rosterList">
         <div class="empty-state" id="emptyState">
@@ -487,21 +543,36 @@
     </section>
   </div>
 
-  <p class="footer-note">Photos are auto-framed to a standard bust shot and compressed to roughly 200 KB before saving. Photos and names are stored privately in your browser for this app and never leave your device except when you export them.</p>
+  <p class="footer-note">Photos are auto-framed to a standard bust shot and compressed to roughly 200 KB before saving. Entries are stored in a shared online ledger (Firebase Firestore) and appear live for everyone using this page. Note: this version has no sign-in, so anyone who has the page's address can view, add, or delete entries — share the link only with your team.</p>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
 <script>
 (function(){
   "use strict";
 
+  // ============================================================
+  //  FIREBASE CONFIG — this is the snippet from the Firebase
+  //  console (Project settings → General → Your apps). If you
+  //  ever create a new Firebase project, replace this block.
+  // ============================================================
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCt8QU4-gs1nGpWSYr5BpS7uzWqaY4rnuk",
+    authDomain: "id-booth-9f615.firebaseapp.com",
+    projectId: "id-booth-9f615",
+    storageBucket: "id-booth-9f615.firebasestorage.app",
+    messagingSenderId: "551580339695",
+    appId: "1:551580339695:web:e4427c89363e18f55fba1a"
+  };
+
   // ---------- state ----------
-  var roster = [];            // [{id, name, thumb, ts}]
+  var roster = [];            // live mirror of the shared ledger [{id, firstName, lastName, thumb, ts}]
   var currentStream = null;
   var pendingCrop = { img: null, naturalW:0, naturalH:0 };
-  var storageOK = true;
 
   // Standard "bust shot" ID-photo shape: portrait, head + shoulders/chest.
   var CROP_ASPECT = 3 / 4; // width / height
@@ -536,10 +607,14 @@
   var rosterList = document.getElementById('rosterList');
   var emptyState = document.getElementById('emptyState');
   var rosterCount = document.getElementById('rosterCount');
+  var connStatus = document.getElementById('connStatus');
   var searchInput = document.getElementById('searchInput');
   var winUsernameInput = document.getElementById('winUsername');
   var exportCsvBtn = document.getElementById('exportCsvBtn');
   var exportZipBtn = document.getElementById('exportZipBtn');
+  var exportContribBtn = document.getElementById('exportContribBtn');
+  var importContribBtn = document.getElementById('importContribBtn');
+  var importContribInput = document.getElementById('importContribInput');
   var toastEl = document.getElementById('toast');
 
   var pendingOverwriteId = null;
@@ -553,109 +628,102 @@
     toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 2600);
   }
 
-  // ---------- local storage (IndexedDB) ----------
-  // This is a real standalone page (camera access requires that), so it
-  // uses the browser's own IndexedDB rather than any Claude-specific API.
-  // One object store, keyed by string: 'roster' holds the roster list,
-  // 'photo:<id>' holds each student's saved (already-compressed) photo.
-  var DB_NAME = 'idbooth-db';
-  var STORE = 'kv';
-  var _dbPromise = null;
+  // ---------- shared ledger (Firebase Firestore) ----------
+  // All entries live in one central Firestore database, so everyone using
+  // this page sees the same ledger and updates appear live on every open
+  // copy of the app within a second or two.
+  //
+  // Data layout — two collections, both keyed by the student ID:
+  //   students/<id>  → { firstName, lastName, thumb, ts }   (small; synced live)
+  //   photos/<id>    → { photo, ts }                        (full ~200 KB JPEG;
+  //                     fetched only when needed for download/export, so the
+  //                     live ledger stays fast and cheap)
+  var db = null;
 
-  function getDB(){
-    if (_dbPromise) return _dbPromise;
-    _dbPromise = new Promise(function(resolve, reject){
-      if (!window.indexedDB){ reject(new Error('IndexedDB unsupported')); return; }
-      var req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = function(){
-        if (!req.result.objectStoreNames.contains(STORE)){
-          req.result.createObjectStore(STORE, { keyPath: 'key' });
-        }
-      };
-      req.onsuccess = function(){ resolve(req.result); };
-      req.onerror = function(){ reject(req.error); };
-    });
-    return _dbPromise;
+  function setConn(state, detail){
+    connStatus.className = 'conn ' + state;
+    if (state === 'live'){
+      connStatus.textContent = 'Live';
+      connStatus.title = 'Connected — the ledger updates in real time for everyone.';
+    } else if (state === 'connecting'){
+      connStatus.textContent = 'Connecting…';
+      connStatus.title = '';
+    } else {
+      connStatus.textContent = 'Not connected';
+      connStatus.title = detail || 'Could not reach the shared ledger. Check your internet connection and the Firestore security rules.';
+    }
   }
-  function idbGet(key){
-    return getDB().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(STORE, 'readonly');
-        var req = tx.objectStore(STORE).get(key);
-        req.onsuccess = function(){ resolve(req.result ? req.result.value : null); };
-        req.onerror = function(){ reject(req.error); };
-      });
-    });
+
+  function initFirebase(){
+    try{
+      if (typeof firebase === 'undefined'){
+        setConn('error', 'The Firebase library failed to load — check your connection and refresh.');
+        toast('The Firebase library failed to load — check your connection and refresh.');
+        return false;
+      }
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+      return true;
+    }catch(e){
+      setConn('error', 'Firebase could not start: ' + e.message);
+      toast('Firebase could not start: ' + e.message);
+      return false;
+    }
   }
-  function idbSet(key, value){
-    return getDB().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).put({ key: key, value: value });
-        tx.oncomplete = function(){ resolve(true); };
-        tx.onerror = function(){ reject(tx.error); };
+
+  function subscribeRoster(){
+    db.collection('students').onSnapshot(function(snap){
+      roster = snap.docs.map(function(d){
+        var v = d.data() || {};
+        return {
+          id: d.id,
+          firstName: v.firstName || '',
+          lastName: v.lastName || '',
+          thumb: v.thumb || '',
+          ts: v.ts || 0
+        };
       });
-    });
-  }
-  function idbDelete(key){
-    return getDB().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).delete(key);
-        tx.oncomplete = function(){ resolve(true); };
-        tx.onerror = function(){ reject(tx.error); };
-      });
+      setConn('live');
+      renderRoster();
+    }, function(err){
+      setConn('error', 'Lost connection to the shared ledger: ' + err.message);
+      toast('Could not reach the shared ledger — ' + err.message +
+        ' (If this says "permission denied", the Firestore security rules need updating.)');
     });
   }
 
   // ---------- storage helpers ----------
-  async function loadRoster(){
-    try{
-      var val = await idbGet('roster');
-      roster = val ? JSON.parse(val) : [];
-    }catch(e){
-      roster = [];
-    }
-    renderRoster();
-  }
-  async function persistRoster(){
-    try{
-      await idbSet('roster', JSON.stringify(roster));
-    }catch(e){
-      storageOK = false;
-      toast('Could not save the ledger — local storage may be full, disabled, or blocked (e.g. private browsing).');
-    }
+  async function saveEntry(id, entry){
+    await db.collection('students').doc(id).set(entry);
   }
   async function savePhoto(id, dataUrl){
     try{
-      await idbSet('photo:' + id, dataUrl);
+      await db.collection('photos').doc(id).set({ photo: dataUrl, ts: Date.now() });
       return true;
     }catch(e){
-      toast('Could not save the photo to local storage.');
+      toast('Could not save the photo to the shared ledger: ' + e.message);
       return false;
     }
   }
   async function getPhoto(id){
     try{
-      return await idbGet('photo:' + id);
+      var doc = await db.collection('photos').doc(id).get();
+      return doc.exists ? (doc.data().photo || null) : null;
     }catch(e){
       return null;
     }
   }
   async function deletePhotoKey(id){
-    try{ await idbDelete('photo:' + id); }catch(e){}
+    try{ await db.collection('photos').doc(id).delete(); }catch(e){}
   }
-  async function loadSettings(){
-    try{
-      var val = await idbGet('settings');
-      var settings = val ? JSON.parse(val) : {};
-      winUsernameInput.value = settings.winUsername || '';
-    }catch(e){ /* ignore — field just stays blank */ }
+
+  // The Windows-username field is a per-coordinator preference, not shared
+  // data, so it stays on this device only.
+  function loadSettings(){
+    try{ winUsernameInput.value = localStorage.getItem('idbooth-winUsername') || ''; }catch(e){}
   }
-  async function saveSettings(){
-    try{
-      await idbSet('settings', JSON.stringify({ winUsername: winUsernameInput.value.trim() }));
-    }catch(e){ /* non-critical, ignore */ }
+  function saveSettings(){
+    try{ localStorage.setItem('idbooth-winUsername', winUsernameInput.value.trim()); }catch(e){}
   }
   winUsernameInput.addEventListener('change', saveSettings);
 
@@ -1057,36 +1125,47 @@
   });
 
   async function doSave(id, firstName, lastName){
+    if (!db){ toast('Not connected to the shared ledger — check your internet connection and refresh.'); return; }
     var thumb = getCroppedDataUrl(110);
     var compressed = compressCroppedPhoto(TARGET_BYTES, 1100, 320);
     var fullRes = compressed.dataUrl;
 
-    var ok = await savePhoto(id, fullRes);
-    if (!ok) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try{
+      var ok = await savePhoto(id, fullRes);
+      if (!ok) return;
+      await saveEntry(id, { firstName: firstName, lastName: lastName, thumb: thumb, ts: Date.now() });
+      // No manual roster update needed — the live subscription refreshes
+      // the ledger here and on everyone else's screen automatically.
 
-    var idx = roster.findIndex(function(r){ return r.id === id; });
-    var entry = { id: id, firstName: firstName, lastName: lastName, thumb: thumb, ts: Date.now() };
-    if (idx >= 0) roster[idx] = entry; else roster.push(entry);
-    await persistRoster();
-    renderRoster();
-
-    var kb = Math.max(1, Math.round(compressed.bytes / 1024));
-    toast('Saved ' + firstName + ' ' + lastName + ' (ID ' + id + ') — ' + kb + ' KB');
-    pendingOverwriteId = null;
-    studentIdInput.value = '';
-    studentFirstNameInput.value = '';
-    studentLastNameInput.value = '';
-    exitCropStage();
-    studentIdInput.focus();
+      var kb = Math.max(1, Math.round(compressed.bytes / 1024));
+      toast('Saved ' + firstName + ' ' + lastName + ' (ID ' + id + ') to the shared ledger — ' + kb + ' KB');
+      pendingOverwriteId = null;
+      studentIdInput.value = '';
+      studentFirstNameInput.value = '';
+      studentLastNameInput.value = '';
+      exitCropStage();
+      studentIdInput.focus();
+    }catch(e){
+      toast('Could not save to the shared ledger: ' + e.message);
+    }finally{
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save to ledger';
+    }
   }
 
   // ---------- delete ----------
   async function deleteEntry(id){
-    roster = roster.filter(function(r){ return r.id !== id; });
-    await persistRoster();
-    await deletePhotoKey(id);
-    renderRoster();
-    toast('Removed from ledger.');
+    if (!db){ toast('Not connected to the shared ledger.'); return; }
+    try{
+      await db.collection('students').doc(id).delete();
+      await deletePhotoKey(id);
+      toast('Removed from the shared ledger.');
+      // The live subscription re-renders the roster for everyone.
+    }catch(e){
+      toast('Could not remove the entry: ' + e.message);
+    }
   }
 
   // ---------- roster rendering ----------
@@ -1179,7 +1258,7 @@
       delBtn.className = 'danger-text';
       delBtn.textContent = 'Delete';
       delBtn.addEventListener('click', function(){
-        if (confirm('Remove ' + displayName(entry) + ' (ID ' + entry.id + ') from the ledger?')){
+        if (confirm('Remove ' + displayName(entry) + ' (ID ' + entry.id + ') from the shared ledger? This removes it for everyone.')){
           deleteEntry(entry.id);
         }
       });
@@ -1302,10 +1381,151 @@
     }
   });
 
+  // ---------- backup + import (merge into the shared ledger) ----------
+  // The ledger itself is shared and live, so day-to-day teamwork needs no
+  // file passing. These two buttons remain useful for:
+  //   • Backup — download a snapshot of the whole shared ledger (entries +
+  //     full photos) as one .json file, e.g. before end-of-year cleanup.
+  //   • Import — merge a backup file, or entry files exported from the old
+  //     offline version of this app, into the shared ledger. Conflicts on
+  //     the same ID keep whichever entry was saved most recently.
+  var CONTRIB_FORMAT = 'idbooth-contribution';
+  var CONTRIB_VERSION = 1;
+
+  function timestampSlug(){
+    var d = new Date();
+    function p(n){ return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+  }
+
+  exportContribBtn.addEventListener('click', async function(){
+    if (roster.length === 0){ toast('No students to back up yet.'); return; }
+    exportContribBtn.disabled = true;
+    exportContribBtn.textContent = 'Preparing…';
+    try{
+      var entries = [];
+      for (var i = 0; i < roster.length; i++){
+        var r = roster[i];
+        var photo = await getPhoto(r.id);
+        entries.push({
+          id: r.id,
+          firstName: r.firstName,
+          lastName: r.lastName,
+          ts: r.ts || 0,
+          thumb: r.thumb,
+          photo: photo || null
+        });
+      }
+      var payload = {
+        format: CONTRIB_FORMAT,
+        version: CONTRIB_VERSION,
+        exportedAt: new Date().toISOString(),
+        entries: entries
+      };
+      var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'idbooth-backup-' + timestampSlug() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast('Backed up ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') + ' from the shared ledger.');
+    } catch(e){
+      toast('Backup failed: ' + e.message);
+    } finally {
+      exportContribBtn.disabled = false;
+      exportContribBtn.textContent = 'Download backup (.json)';
+    }
+  });
+
+  importContribBtn.addEventListener('click', function(){
+    importContribInput.value = ''; // allow re-selecting the same files
+    importContribInput.click();
+  });
+
+  function readFileAsText(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = function(){ reject(new Error('Could not read ' + file.name)); };
+      reader.readAsText(file);
+    });
+  }
+
+  importContribInput.addEventListener('change', async function(){
+    var files = Array.from(importContribInput.files || []);
+    if (files.length === 0) return;
+    if (!db){ toast('Not connected to the shared ledger — check your connection and refresh.'); return; }
+    importContribBtn.disabled = true;
+    importContribBtn.textContent = 'Importing…';
+
+    var added = 0, updated = 0, skipped = 0, badFiles = [];
+    try{
+      for (var f = 0; f < files.length; f++){
+        var data;
+        try{
+          data = JSON.parse(await readFileAsText(files[f]));
+        } catch(e){
+          badFiles.push(files[f].name);
+          continue;
+        }
+        if (!data || data.format !== CONTRIB_FORMAT || !Array.isArray(data.entries)){
+          badFiles.push(files[f].name);
+          continue;
+        }
+        for (var i = 0; i < data.entries.length; i++){
+          var entry = data.entries[i];
+          if (!entry || !entry.id || !entry.firstName || !entry.lastName) continue;
+          var id = String(entry.id).trim();
+          var incoming = {
+            firstName: String(entry.firstName).trim(),
+            lastName: String(entry.lastName).trim(),
+            thumb: entry.thumb || '',
+            ts: entry.ts || 0
+          };
+          var existing = roster.find(function(r){ return r.id === id; });
+          if (existing){
+            // Same ID already in the shared ledger: keep the most recent.
+            if ((incoming.ts || 0) > (existing.ts || 0)){
+              if (entry.photo) await savePhoto(id, entry.photo);
+              await saveEntry(id, incoming);
+              updated++;
+            } else {
+              skipped++;
+            }
+          } else {
+            if (entry.photo) await savePhoto(id, entry.photo);
+            await saveEntry(id, incoming);
+            added++;
+          }
+        }
+      }
+
+      var parts = [];
+      if (added) parts.push(added + ' added');
+      if (updated) parts.push(updated + ' updated (newer photo kept)');
+      if (skipped) parts.push(skipped + ' skipped (the shared ledger already had a newer copy)');
+      if (parts.length === 0) parts.push('nothing new to merge');
+      var msg = 'Import finished: ' + parts.join(', ') + '.';
+      if (badFiles.length) msg += ' Ignored ' + badFiles.length + ' file(s) that were not ID Booth exports.';
+      toast(msg);
+    } catch(e){
+      toast('Import failed: ' + e.message);
+    } finally {
+      importContribBtn.disabled = false;
+      importContribBtn.textContent = 'Import entries…';
+    }
+  });
+
   // ---------- init ----------
   (async function init(){
-    await loadRoster();
-    await loadSettings();
+    loadSettings();
+    setConn('connecting');
+    if (initFirebase()){
+      subscribeRoster();
+    }
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
       await startCamera(null);
     } else {
