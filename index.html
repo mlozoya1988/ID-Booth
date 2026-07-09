@@ -34,14 +34,14 @@
   .app{
     max-width:1240px;
     margin:0 auto;
-    padding:28px 20px 60px;
+    padding:18px 20px 48px;
   }
   header.top{
     display:flex;
     align-items:baseline;
     justify-content:space-between;
     gap:16px;
-    margin-bottom:24px;
+    margin-bottom:14px;
     flex-wrap:wrap;
   }
   header.top .brand{
@@ -108,11 +108,11 @@
   }
   .grid{
     display:grid;
-    grid-template-columns:minmax(0,420px) 1fr;
+    grid-template-columns:minmax(0,840px) 1fr;
     gap:22px;
     align-items:start;
   }
-  @media (max-width:860px){
+  @media (max-width:1100px){
     .grid{grid-template-columns:1fr;}
   }
   .panel{
@@ -177,7 +177,7 @@
   .viewfinder{
     position:relative;
     width:100%;
-    aspect-ratio:4/3;
+    aspect-ratio:16/9;
     background:#0E1116;
     border-radius:8px;
     overflow:hidden;
@@ -233,7 +233,7 @@
   .crop-frame img#capturedImg{
     display:block;
     max-width:100%;
-    max-height:520px;
+    max-height:760px;
     user-select:none;
     -webkit-user-drag:none;
   }
@@ -322,6 +322,182 @@
   }
   .warn-box .warn-actions{margin-top:10px; display:flex; gap:8px;}
   .warn-box.show{display:block;}
+
+  /* ---- roster bar ---- */
+  .roster-bar{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 16px;
+    margin-top:22px;
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .roster-bar .rb-label{
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .roster-bar select{
+    flex:1;
+    min-width:180px;
+    max-width:420px;
+    padding:9px 11px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:14px;
+    font-family:var(--sans);
+    background:#FAFBFC;
+    color:var(--ink);
+  }
+  .roster-bar select:focus{outline:none; border-color:var(--accent); background:#fff;}
+  .roster-bar select:disabled{opacity:.6;}
+  .rb-usage{
+    margin-left:auto;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .rb-usage.warn{color:#B45309; font-weight:600;}
+  .rb-usage.danger{color:var(--danger); font-weight:600;}
+
+  .storage-warn{
+    display:none;
+    background:#FFF4ED;
+    border:1px solid #F0C4A8;
+    color:#8A3B12;
+    font-size:13px;
+    padding:12px 16px;
+    border-radius:8px;
+    margin-bottom:14px;
+    line-height:1.5;
+  }
+  .storage-warn.show{display:block;}
+  .storage-warn.danger{
+    background:#FDEDEC;
+    border-color:#E4B7B4;
+    color:#7F1D18;
+    font-weight:500;
+  }
+
+  /* ---- selected student banner ---- */
+  .student-banner{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 20px;
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    min-height:64px;
+  }
+  .sb-empty{color:var(--muted); font-size:14px;}
+  .sb-name{
+    font-size:38px;
+    font-weight:700;
+    letter-spacing:-0.02em;
+    line-height:1.08;
+  }
+  @media (max-width:700px){ .sb-name{font-size:28px;} }
+  .sb-meta{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--muted);
+    margin-top:5px;
+  }
+
+  /* ---- directory search dropdown ---- */
+  .dir-results{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:8px;
+    box-shadow:0 10px 26px rgba(28,36,48,.14);
+    z-index:10;
+    max-height:290px;
+    overflow-y:auto;
+    display:none;
+    margin-top:4px;
+  }
+  .dir-results.open{display:block;}
+  .dir-row{
+    padding:9px 13px;
+    cursor:pointer;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:10px;
+    border-bottom:1px solid #F2F3F5;
+  }
+  .dir-row:last-child{border-bottom:none;}
+  .dir-row:hover, .dir-row.active{background:#F5F6F7;}
+  .dir-row .dr-name{font-weight:600; font-size:14px;}
+  .dir-row .dr-sub{font-family:var(--mono); font-size:12px; color:var(--muted);}
+  .dir-row .dr-done{font-size:11px; font-weight:600; color:var(--confirm); white-space:nowrap;}
+  .dir-none{padding:13px; color:var(--muted); font-size:13px;}
+  .dir-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .dir-bar .hint{margin:0; text-align:left;}
+
+  /* ---- silhouette + countdown overlays ---- */
+  .viewfinder .silhouette{
+    position:absolute;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    height:92%;
+    fill:none;
+    stroke:rgba(255,255,255,.6);
+    stroke-width:4;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    pointer-events:none;
+  }
+  .viewfinder .countdown{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(14,17,22,.25);
+    z-index:2;
+    pointer-events:none;
+  }
+  .viewfinder .countdown.show{display:flex;}
+  .viewfinder .countdown span{
+    font-family:var(--mono);
+    font-size:150px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 3px 22px rgba(0,0,0,.65);
+    animation:cdPop 1s ease both;
+  }
+  @keyframes cdPop{
+    0%{transform:scale(1.3); opacity:0;}
+    18%{opacity:1;}
+    100%{transform:scale(.94); opacity:.85;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .viewfinder .countdown span{animation:none;}
+  }
 
   /* ---- roster panel ---- */
   .roster-list{
@@ -413,6 +589,15 @@
     </div>
   </header>
 
+  <div class="student-banner" id="studentBanner">
+    <div class="sb-empty" id="sbEmpty">No student selected — search the directory in the Capture panel to begin.</div>
+    <div id="sbSelected" style="display:none;">
+      <div class="sb-name" id="sbName"></div>
+      <div class="sb-meta" id="sbMeta"></div>
+    </div>
+    <button class="ghost" id="sbClearBtn" style="display:none;">Change student</button>
+  </div>
+
   <div class="grid">
     <!-- CAPTURE PANEL -->
     <section class="panel">
@@ -422,19 +607,15 @@
       </div>
       <div class="panel-body">
 
-        <div class="field">
-          <label for="studentId">ID number</label>
-          <input id="studentId" type="text" placeholder="e.g. 100482" autocomplete="off">
+        <div class="field" style="position:relative;">
+          <label for="dirSearch">Find student</label>
+          <input id="dirSearch" type="text" placeholder="Search by name, ID, or email…" autocomplete="off">
+          <div class="dir-results" id="dirResults"></div>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="studentFirstName">First name</label>
-            <input id="studentFirstName" type="text" placeholder="e.g. John" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="studentLastName">Last name</label>
-            <input id="studentLastName" type="text" placeholder="e.g. Doe" autocomplete="off">
-          </div>
+        <div class="dir-bar">
+          <span class="hint" id="dirCount">Loading directory…</span>
+          <button class="subtle" id="uploadCsvBtn">Replace student list (.csv)</button>
+          <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none;">
         </div>
 
         <div class="warn-box" id="dupWarn">
@@ -448,6 +629,16 @@
         <!-- Live camera -->
         <div class="viewfinder" id="viewfinder">
           <video id="video" autoplay playsinline muted></video>
+          <svg class="silhouette" id="silhouette" viewBox="0 0 300 260" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+            <path d="M6 260
+                     C14 200 64 170 108 150
+                     C96 136 92 114 92 88
+                     C92 46 116 20 150 20
+                     C184 20 208 46 208 88
+                     C208 114 204 136 192 150
+                     C236 170 286 200 294 260"/>
+          </svg>
+          <div class="countdown" id="countdownEl"></div>
           <div class="bracket tl"></div>
           <div class="bracket tr"></div>
           <div class="bracket bl"></div>
@@ -459,7 +650,7 @@
           <button class="shutter" id="shutterBtn" title="Take photo"></button>
           <div style="width:110px;"></div>
         </div>
-        <p class="hint" id="liveHint">Position the student in frame, then press the shutter.</p>
+        <p class="hint" id="liveHint">Line the student up with the silhouette, then press the shutter — the photo is taken after a 3-second countdown.</p>
 
         <!-- Crop stage -->
         <div id="cropStage">
@@ -500,11 +691,21 @@
       <div class="roster-list" id="rosterList">
         <div class="empty-state" id="emptyState">
           <strong>No students saved yet</strong>
-          Take a photo, add an ID number and name, then save it here.
+          Search the directory, pick a student, and take their photo.
         </div>
       </div>
     </section>
   </div>
+
+  <div class="roster-bar">
+    <span class="rb-label">Roster</span>
+    <select id="rosterSelect"></select>
+    <button class="ghost" id="newRosterBtn">New roster (.csv)…</button>
+    <button class="danger-text" id="deleteRosterBtn">Delete roster…</button>
+    <span class="rb-usage" id="storageUsage">calculating storage…</span>
+  </div>
+
+  <div class="storage-warn" id="storageWarn"><span id="storageWarnText"></span></div>
 
   <p class="footer-note">Photos are auto-framed to a standard bust shot and compressed to roughly 200 KB before saving. Entries are stored in a shared online ledger (Firebase Firestore) and appear live for everyone using this page. Note: this version has no sign-in, so anyone who has the page's address can view, add, or delete entries — share the link only with your team.</p>
 </div>
@@ -533,7 +734,11 @@
   };
 
   // ---------- state ----------
-  var roster = [];            // live mirror of the shared ledger [{id, firstName, lastName, thumb, ts}]
+  var roster = [];            // live mirror of the active roster's saved photos [{id, firstName, mi, lastName, email, thumb, ts}]
+  var directory = [];         // active roster's student directory [{id, firstName, mi, lastName, email}]
+  var rosterList = [];        // all rosters [{rid, name, count}]
+  var activeRosterId = null;  // currently selected roster
+  var selectedStudent = null; // the student currently chosen for a photo
   var currentStream = null;
   var pendingCrop = { img: null, naturalW:0, naturalH:0 };
 
@@ -559,15 +764,31 @@
   var retakeBtn = document.getElementById('retakeBtn');
   var saveBtn = document.getElementById('saveBtn');
 
-  var studentIdInput = document.getElementById('studentId');
-  var studentFirstNameInput = document.getElementById('studentFirstName');
-  var studentLastNameInput = document.getElementById('studentLastName');
+  var studentBanner = document.getElementById('studentBanner');
+  var sbEmpty = document.getElementById('sbEmpty');
+  var sbSelected = document.getElementById('sbSelected');
+  var sbName = document.getElementById('sbName');
+  var sbMeta = document.getElementById('sbMeta');
+  var sbClearBtn = document.getElementById('sbClearBtn');
+  var dirSearchInput = document.getElementById('dirSearch');
+  var dirResults = document.getElementById('dirResults');
+  var dirCount = document.getElementById('dirCount');
+  var uploadCsvBtn = document.getElementById('uploadCsvBtn');
+  var csvFileInput = document.getElementById('csvFileInput');
+  var rosterSelect = document.getElementById('rosterSelect');
+  var newRosterBtn = document.getElementById('newRosterBtn');
+  var deleteRosterBtn = document.getElementById('deleteRosterBtn');
+  var storageUsage = document.getElementById('storageUsage');
+  var storageWarn = document.getElementById('storageWarn');
+  var storageWarnText = document.getElementById('storageWarnText');
+  var silhouette = document.getElementById('silhouette');
+  var countdownEl = document.getElementById('countdownEl');
   var dupWarn = document.getElementById('dupWarn');
   var dupWarnText = document.getElementById('dupWarnText');
   var dupOverwriteBtn = document.getElementById('dupOverwriteBtn');
   var dupCancelBtn = document.getElementById('dupCancelBtn');
 
-  var rosterList = document.getElementById('rosterList');
+  var rosterListEl = document.getElementById('rosterList');
   var emptyState = document.getElementById('emptyState');
   var rosterCount = document.getElementById('rosterCount');
   var connStatus = document.getElementById('connStatus');
@@ -630,20 +851,51 @@
     }
   }
 
-  function subscribeRoster(){
-    db.collection('students').onSnapshot(function(snap){
-      roster = snap.docs.map(function(d){
+  // ---------- rosters ----------
+  // Data layout — everything lives under one document per roster:
+  //   rosters/<rid>                     → { name, count, chunks, createdAt }
+  //   rosters/<rid>/directory/c0..cN   → { json }  (chunked student list from the CSV)
+  //   rosters/<rid>/students/<id>      → { firstName, mi, lastName, email, thumb, ts }
+  //   rosters/<rid>/photos/<id>        → { photo, ts }
+  var unsubStudents = null;
+  var unsubDirectory = null;
+
+  function rosterRef(){
+    return db.collection('rosters').doc(activeRosterId);
+  }
+  function activeRosterMeta(){
+    return rosterList.find(function(r){ return r.rid === activeRosterId; }) || null;
+  }
+
+  function subscribeRosterList(){
+    db.collection('rosters').onSnapshot(function(snap){
+      rosterList = snap.docs.map(function(d){
         var v = d.data() || {};
         return {
-          id: d.id,
-          firstName: v.firstName || '',
-          lastName: v.lastName || '',
-          thumb: v.thumb || '',
-          ts: v.ts || 0
+          rid: d.id,
+          name: v.name || 'Untitled roster',
+          count: v.count || 0,
+          createdAt: v.createdAt || 0,
+          photoBytes: v.photoBytes || 0,
+          dirBytes: v.dirBytes || 0
         };
       });
+      rosterList.sort(function(a,b){ return a.name.localeCompare(b.name, undefined, {sensitivity:'base'}); });
       setConn('live');
-      renderRoster();
+      updateStorageEstimate();
+
+      // If the active roster was deleted (possibly by another station), fall back.
+      if (activeRosterId && !rosterList.some(function(r){ return r.rid === activeRosterId; })){
+        activeRosterId = null;
+      }
+      if (!activeRosterId){
+        var savedId = null;
+        try{ savedId = localStorage.getItem('idbooth-activeRoster'); }catch(e){}
+        var pick = rosterList.find(function(r){ return r.rid === savedId; }) || rosterList[0] || null;
+        setActiveRoster(pick ? pick.rid : null);
+      } else {
+        renderRosterSelect();
+      }
     }, function(err){
       setConn('error', 'Lost connection to the shared ledger: ' + err.message);
       toast('Could not reach the shared ledger — ' + err.message +
@@ -651,13 +903,146 @@
     });
   }
 
-  // ---------- storage helpers ----------
+  function renderRosterSelect(){
+    rosterSelect.innerHTML = '';
+    if (rosterList.length === 0){
+      var opt = document.createElement('option');
+      opt.textContent = 'No rosters yet — create one';
+      rosterSelect.appendChild(opt);
+      rosterSelect.disabled = true;
+      deleteRosterBtn.disabled = true;
+      return;
+    }
+    rosterList.forEach(function(r){
+      var opt = document.createElement('option');
+      opt.value = r.rid;
+      opt.textContent = r.name + ' (' + r.count + ' students)';
+      rosterSelect.appendChild(opt);
+    });
+    rosterSelect.value = activeRosterId || rosterList[0].rid;
+    rosterSelect.disabled = false;
+    deleteRosterBtn.disabled = false;
+  }
+
+  function setActiveRoster(rid){
+    if (unsubStudents){ unsubStudents(); unsubStudents = null; }
+    if (unsubDirectory){ unsubDirectory(); unsubDirectory = null; }
+    activeRosterId = rid;
+    try{ if (rid) localStorage.setItem('idbooth-activeRoster', rid); }catch(e){}
+
+    roster = [];
+    directory = [];
+    clearSelection();
+    renderRoster();
+    updateDirCount();
+    renderRosterSelect();
+    if (!rid) return;
+
+    unsubStudents = rosterRef().collection('students').onSnapshot(function(snap){
+      roster = snap.docs.map(function(d){
+        var v = d.data() || {};
+        return {
+          id: d.id,
+          firstName: v.firstName || '',
+          mi: v.mi || '',
+          lastName: v.lastName || '',
+          email: v.email || '',
+          thumb: v.thumb || '',
+          bytes: v.bytes || 0,
+          ts: v.ts || 0
+        };
+      });
+      setConn('live');
+      renderRoster();
+    }, function(err){
+      setConn('error', 'Lost connection to the shared ledger: ' + err.message);
+    });
+
+    unsubDirectory = rosterRef().collection('directory').onSnapshot(function(snap){
+      var parts = snap.docs.slice().sort(function(a,b){
+        return parseInt(a.id.slice(1), 10) - parseInt(b.id.slice(1), 10);
+      }).map(function(d){ return (d.data() || {}).json || ''; });
+      try{
+        directory = parts.length ? JSON.parse(parts.join('')) : [];
+      }catch(e){
+        directory = [];
+      }
+      updateDirCount();
+      if (dirResults.classList.contains('open')) renderDirResults();
+    }, function(err){
+      dirCount.textContent = 'Could not load the student list: ' + err.message;
+    });
+  }
+
+  rosterSelect.addEventListener('change', function(){
+    if (rosterSelect.value && rosterSelect.value !== activeRosterId){
+      setActiveRoster(rosterSelect.value);
+    }
+  });
+
+  // ---------- storage monitor ----------
+  // The Firebase free (Spark) plan includes 1 GiB of Firestore storage.
+  // Firestore doesn't tell clients the exact usage, so each roster doc keeps
+  // running byte counters (photoBytes, dirBytes) that are updated as photos
+  // are saved and deleted. Summed together they give a close estimate of
+  // total usage, shown in the roster bar and escalated to warnings as the
+  // limit approaches. Photos saved by older versions of this app (before
+  // counters existed) are approximated at a typical size.
+  var STORAGE_LIMIT_BYTES = 1024 * 1024 * 1024; // 1 GiB
+  var LEGACY_PHOTO_ESTIMATE = 280 * 1024;       // typical photo doc + thumb, pre-counter versions
+  var storageWarnedLevel = 0;                   // 0 = none, 1 = 80% toast shown, 2 = 95% toast shown
+
+  function entryBytes(entry){
+    return entry ? (entry.bytes || LEGACY_PHOTO_ESTIMATE) : 0;
+  }
+
+  function formatBytes(b){
+    if (b >= 1024 * 1024 * 1024) return (b / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    if (b >= 1024 * 1024) return Math.round(b / (1024 * 1024)) + ' MB';
+    return Math.max(1, Math.round(b / 1024)) + ' KB';
+  }
+
+  function updateStorageEstimate(){
+    var total = rosterList.reduce(function(sum, r){
+      return sum + (r.photoBytes || 0) + (r.dirBytes || 0);
+    }, 0);
+    var pct = total / STORAGE_LIMIT_BYTES * 100;
+
+    storageUsage.textContent = '~' + formatBytes(total) + ' of 1 GB used';
+    storageUsage.className = 'rb-usage' + (pct >= 95 ? ' danger' : (pct >= 80 ? ' warn' : ''));
+    storageUsage.title = 'Estimated Firestore usage across all rosters (free-plan limit: 1 GB).';
+
+    if (pct >= 95){
+      storageWarn.classList.add('show', 'danger');
+      storageWarnText.textContent = 'Storage is nearly full — about ' + Math.round(pct) +
+        '% of the free Firebase plan\u2019s 1 GB limit. New photos may soon fail to save. ' +
+        'Export any rosters you need (Export CSV + Export photos), then delete them here to free space — or upgrade the Firebase project to the Blaze plan.';
+      if (storageWarnedLevel < 2){
+        storageWarnedLevel = 2;
+        toast('Warning: shared photo storage is nearly full (' + Math.round(pct) + '% of the free 1 GB limit).');
+      }
+    } else if (pct >= 80){
+      storageWarn.classList.add('show');
+      storageWarn.classList.remove('danger');
+      storageWarnText.textContent = 'Heads up: shared photo storage is at about ' + Math.round(pct) +
+        '% of the free Firebase plan\u2019s 1 GB limit. Consider exporting finished rosters (Export CSV + Export photos) and deleting them here to free space.';
+      if (storageWarnedLevel < 1){
+        storageWarnedLevel = 1;
+        toast('Heads up: shared photo storage has passed 80% of the free 1 GB limit.');
+      }
+    } else {
+      storageWarn.classList.remove('show', 'danger');
+      if (pct < 75) storageWarnedLevel = 0; // re-arm the toasts if space is freed
+    }
+  }
+
+  // ---------- storage helpers (scoped to the active roster) ----------
   async function saveEntry(id, entry){
-    await db.collection('students').doc(id).set(entry);
+    await rosterRef().collection('students').doc(id).set(entry);
   }
   async function savePhoto(id, dataUrl){
     try{
-      await db.collection('photos').doc(id).set({ photo: dataUrl, ts: Date.now() });
+      await rosterRef().collection('photos').doc(id).set({ photo: dataUrl, ts: Date.now() });
       return true;
     }catch(e){
       toast('Could not save the photo to the shared ledger: ' + e.message);
@@ -666,14 +1051,14 @@
   }
   async function getPhoto(id){
     try{
-      var doc = await db.collection('photos').doc(id).get();
+      var doc = await rosterRef().collection('photos').doc(id).get();
       return doc.exists ? (doc.data().photo || null) : null;
     }catch(e){
       return null;
     }
   }
   async function deletePhotoKey(id){
-    try{ await db.collection('photos').doc(id).delete(); }catch(e){}
+    try{ await rosterRef().collection('photos').doc(id).delete(); }catch(e){}
   }
 
   // The Windows username is asked for via a prompt when exporting the CSV.
@@ -724,10 +1109,12 @@
     vfMessage.innerHTML = html;
     vfMessage.style.display = 'flex';
     video.style.display = 'none';
+    silhouette.style.display = 'none';
   }
   function hideVfMessage(){
     vfMessage.style.display = 'none';
     video.style.display = 'block';
+    silhouette.style.display = 'block';
   }
 
   async function startCamera(deviceId){
@@ -793,7 +1180,40 @@
   switchCamBtn.addEventListener('click', function(){ startCamera(cameraSelect.value || null); });
 
   // ---------- capture ----------
-  shutterBtn.addEventListener('click', function(){
+  var countdownActive = false;
+  var countdownTimer = null;
+
+  function showCountdownTick(n){
+    // Recreate the span each tick so the pop animation restarts.
+    countdownEl.innerHTML = '<span>' + n + '</span>';
+    countdownEl.classList.add('show');
+  }
+  function hideCountdown(){
+    countdownEl.classList.remove('show');
+    countdownEl.innerHTML = '';
+  }
+
+  function runCountdown(seconds){
+    countdownActive = true;
+    shutterBtn.disabled = true;
+    var n = seconds;
+    showCountdownTick(n);
+    countdownTimer = setInterval(function(){
+      n--;
+      if (n > 0){
+        showCountdownTick(n);
+      } else {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        hideCountdown();
+        countdownActive = false;
+        shutterBtn.disabled = false;
+        capturePhoto();
+      }
+    }, 1000);
+  }
+
+  function capturePhoto(){
     if (!video.videoWidth) return;
     var canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -802,6 +1222,11 @@
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     enterCropStage(dataUrl, canvas.width, canvas.height);
+  }
+
+  shutterBtn.addEventListener('click', function(){
+    if (!video.videoWidth || countdownActive) return;
+    runCountdown(3);
   });
 
   function enterCropStage(dataUrl, w, h){
@@ -1051,27 +1476,20 @@
   }
 
   // ---------- save flow ----------
-  function currentFormValid(){
-    return studentIdInput.value.trim().length > 0 &&
-      studentFirstNameInput.value.trim().length > 0 &&
-      studentLastNameInput.value.trim().length > 0;
-  }
-
   saveBtn.addEventListener('click', function(){
-    var id = studentIdInput.value.trim();
-    var firstName = studentFirstNameInput.value.trim();
-    var lastName = studentLastNameInput.value.trim();
-    if (!id || !firstName || !lastName){
-      toast('Enter an ID number, first name, and last name before saving.');
+    if (!selectedStudent){
+      toast('Select a student from the directory search before saving.');
+      dirSearchInput.focus();
       return;
     }
-    var existing = roster.find(function(r){ return r.id === id; });
+    var s = selectedStudent;
+    var existing = roster.find(function(r){ return r.id === s.id; });
     if (existing && existing.id !== pendingOverwriteId){
-      dupWarnText.textContent = 'ID ' + id + ' is already saved for "' + existing.firstName + ' ' + existing.lastName + '".';
+      dupWarnText.textContent = 'ID ' + s.id + ' already has a photo saved for "' + displayName(existing) + '".';
       dupWarn.classList.add('show');
       return;
     }
-    doSave(id, firstName, lastName);
+    doSave(s);
   });
 
   dupCancelBtn.addEventListener('click', function(){
@@ -1079,16 +1497,15 @@
     pendingOverwriteId = null;
   });
   dupOverwriteBtn.addEventListener('click', function(){
-    var id = studentIdInput.value.trim();
-    var firstName = studentFirstNameInput.value.trim();
-    var lastName = studentLastNameInput.value.trim();
-    pendingOverwriteId = id;
+    if (!selectedStudent) return;
+    pendingOverwriteId = selectedStudent.id;
     dupWarn.classList.remove('show');
-    doSave(id, firstName, lastName);
+    doSave(selectedStudent);
   });
 
-  async function doSave(id, firstName, lastName){
+  async function doSave(s){
     if (!db){ toast('Not connected to the shared ledger — check your internet connection and refresh.'); return; }
+    if (!activeRosterId){ toast('No roster is selected — create or choose one at the top of the page.'); return; }
     var thumb = getCroppedDataUrl(110);
     var compressed = compressCroppedPhoto(TARGET_BYTES, 1100, 320);
     var fullRes = compressed.dataUrl;
@@ -1096,20 +1513,29 @@
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
     try{
-      var ok = await savePhoto(id, fullRes);
+      var ok = await savePhoto(s.id, fullRes);
       if (!ok) return;
-      await saveEntry(id, { firstName: firstName, lastName: lastName, thumb: thumb, ts: Date.now() });
+      var newBytes = fullRes.length + thumb.length;
+      var existing = roster.find(function(r){ return r.id === s.id; });
+      var delta = newBytes - entryBytes(existing); // overwrites shouldn't double-count
+      await saveEntry(s.id, {
+        firstName: s.firstName,
+        mi: s.mi || '',
+        lastName: s.lastName,
+        email: s.email || '',
+        thumb: thumb,
+        bytes: newBytes,
+        ts: Date.now()
+      });
+      await rosterRef().set({ photoBytes: firebase.firestore.FieldValue.increment(delta) }, { merge: true });
       // No manual roster update needed — the live subscription refreshes
       // the ledger here and on everyone else's screen automatically.
 
       var kb = Math.max(1, Math.round(compressed.bytes / 1024));
-      toast('Saved ' + firstName + ' ' + lastName + ' (ID ' + id + ') to the shared ledger — ' + kb + ' KB');
+      toast('Saved ' + fullName(s) + ' (ID ' + s.id + ') to the shared ledger — ' + kb + ' KB');
       pendingOverwriteId = null;
-      studentIdInput.value = '';
-      studentFirstNameInput.value = '';
-      studentLastNameInput.value = '';
       exitCropStage();
-      studentIdInput.focus();
+      clearSelection(); // ready for the next student
     }catch(e){
       toast('Could not save to the shared ledger: ' + e.message);
     }finally{
@@ -1122,8 +1548,13 @@
   async function deleteEntry(id){
     if (!db){ toast('Not connected to the shared ledger.'); return; }
     try{
-      await db.collection('students').doc(id).delete();
+      var entry = roster.find(function(r){ return r.id === id; });
+      var freed = entryBytes(entry);
+      await rosterRef().collection('students').doc(id).delete();
       await deletePhotoKey(id);
+      if (freed > 0){
+        await rosterRef().set({ photoBytes: firebase.firestore.FieldValue.increment(-freed) }, { merge: true });
+      }
       toast('Removed from the shared ledger.');
       // The live subscription re-renders the roster for everyone.
     }catch(e){
@@ -1137,8 +1568,9 @@
     return /[A-Z]/.test(c) ? c : '#';
   }
   function displayName(entry){
-    return entry.firstName + ' ' + entry.lastName;
+    return entry.firstName + ' ' + (entry.mi ? entry.mi + '. ' : '') + entry.lastName;
   }
+  var fullName = displayName; // same formatting for directory students
 
   function renderRoster(){
     var query = searchInput.value.trim().toLowerCase();
@@ -1155,16 +1587,16 @@
 
     rosterCount.textContent = roster.length + (roster.length === 1 ? ' student saved' : ' students saved');
 
-    rosterList.innerHTML = '';
+    rosterListEl.innerHTML = '';
     if (filtered.length === 0){
       var empty = document.createElement('div');
       empty.className = 'empty-state';
       if (roster.length === 0){
-        empty.innerHTML = '<strong>No students saved yet</strong>Take a photo, add an ID number and name, then save it here.';
+        empty.innerHTML = '<strong>No students saved yet</strong>Search the directory, pick a student, and take their photo.';
       } else {
         empty.innerHTML = '<strong>No matches</strong>Try a different name or ID.';
       }
-      rosterList.appendChild(empty);
+      rosterListEl.appendChild(empty);
       return;
     }
 
@@ -1175,7 +1607,7 @@
         var tab = document.createElement('div');
         tab.className = 'letter-tab';
         tab.textContent = letter;
-        rosterList.appendChild(tab);
+        rosterListEl.appendChild(tab);
         lastLetter = letter;
       }
       var row = document.createElement('div');
@@ -1230,7 +1662,7 @@
       actions.appendChild(delBtn);
       row.appendChild(actions);
 
-      rosterList.appendChild(row);
+      rosterListEl.appendChild(row);
     });
   }
 
@@ -1271,6 +1703,12 @@
   searchInput.addEventListener('input', renderRoster);
 
   // ---------- exports ----------
+  function rosterSlug(){
+    var m = activeRosterMeta();
+    var s = (m ? m.name : 'roster').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return s || 'roster';
+  }
+
   function sortByLastName(list){
     return list.slice().sort(function(a,b){
       return a.lastName.localeCompare(b.lastName, undefined, {sensitivity:'base'}) ||
@@ -1298,7 +1736,7 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'student_roster.csv';
+    a.download = rosterSlug() + '_roster.csv';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1328,7 +1766,7 @@
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = 'student_photos.zip';
+      a.download = rosterSlug() + '_photos.zip';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1344,11 +1782,360 @@
     }
   });
 
+  // ---------- student directory (per roster, from uploaded CSV) ----------
+  // Each roster's student list is stored as JSON split across chunk docs in
+  // its 'directory' subcollection (c0, c1, …), each safely under Firestore's
+  // 1 MB document limit. The live subscription lives in setActiveRoster.
+  var DIR_CHUNK_CHARS = 700000; // ~700 KB per doc
+
+  function updateDirCount(){
+    if (!activeRosterId){
+      dirCount.textContent = 'No roster selected — create one with "New roster" above.';
+    } else if (directory.length === 0){
+      dirCount.textContent = 'This roster has no student list yet.';
+    } else {
+      dirCount.textContent = directory.length + ' students in this roster.';
+    }
+  }
+
+  // ----- search + selection -----
+  var dirHighlight = 0;
+  var dirMatches = [];
+
+  function searchDirectory(query){
+    var q = query.trim().toLowerCase();
+    if (!q) return [];
+    var tokens = q.split(/\s+/);
+    return directory.filter(function(s){
+      var hay = (s.firstName + ' ' + (s.mi || '') + ' ' + s.lastName + ' ' + s.id + ' ' + (s.email || '')).toLowerCase();
+      return tokens.every(function(t){ return hay.indexOf(t) !== -1; });
+    }).slice(0, 8);
+  }
+
+  function renderDirResults(){
+    dirMatches = searchDirectory(dirSearchInput.value);
+    dirResults.innerHTML = '';
+    if (dirSearchInput.value.trim() === ''){
+      dirResults.classList.remove('open');
+      return;
+    }
+    if (directory.length === 0){
+      var d = document.createElement('div');
+      d.className = 'dir-none';
+      d.textContent = 'No directory loaded — upload the student CSV below first.';
+      dirResults.appendChild(d);
+      dirResults.classList.add('open');
+      return;
+    }
+    if (dirMatches.length === 0){
+      var none = document.createElement('div');
+      none.className = 'dir-none';
+      none.textContent = 'No matching students.';
+      dirResults.appendChild(none);
+      dirResults.classList.add('open');
+      return;
+    }
+    if (dirHighlight >= dirMatches.length) dirHighlight = 0;
+    dirMatches.forEach(function(s, i){
+      var row = document.createElement('div');
+      row.className = 'dir-row' + (i === dirHighlight ? ' active' : '');
+      var left = document.createElement('div');
+      var nm = document.createElement('div');
+      nm.className = 'dr-name';
+      nm.textContent = fullName(s);
+      var sub = document.createElement('div');
+      sub.className = 'dr-sub';
+      sub.textContent = 'ID ' + s.id + (s.email ? ' · ' + s.email : '');
+      left.appendChild(nm);
+      left.appendChild(sub);
+      row.appendChild(left);
+      if (roster.some(function(r){ return r.id === s.id; })){
+        var done = document.createElement('span');
+        done.className = 'dr-done';
+        done.textContent = '✓ photographed';
+        row.appendChild(done);
+      }
+      row.addEventListener('mousedown', function(e){ e.preventDefault(); selectStudent(s); });
+      dirResults.appendChild(row);
+    });
+    dirResults.classList.add('open');
+  }
+
+  function hideDirResults(){
+    dirResults.classList.remove('open');
+    dirHighlight = 0;
+  }
+
+  function selectStudent(s){
+    selectedStudent = s;
+    sbName.textContent = fullName(s);
+    sbMeta.textContent = 'ID ' + s.id + (s.email ? ' · ' + s.email : '');
+    sbEmpty.style.display = 'none';
+    sbSelected.style.display = 'block';
+    sbClearBtn.style.display = 'inline-block';
+    dirSearchInput.value = '';
+    hideDirResults();
+    dupWarn.classList.remove('show');
+    pendingOverwriteId = null;
+  }
+
+  function clearSelection(){
+    selectedStudent = null;
+    sbEmpty.style.display = 'block';
+    sbSelected.style.display = 'none';
+    sbClearBtn.style.display = 'none';
+    dupWarn.classList.remove('show');
+    pendingOverwriteId = null;
+    dirSearchInput.focus();
+  }
+
+  sbClearBtn.addEventListener('click', clearSelection);
+
+  dirSearchInput.addEventListener('input', function(){
+    dirHighlight = 0;
+    renderDirResults();
+  });
+  dirSearchInput.addEventListener('focus', function(){
+    if (dirSearchInput.value.trim()) renderDirResults();
+  });
+  dirSearchInput.addEventListener('blur', function(){
+    // Delay so a mousedown on a result can register first.
+    setTimeout(hideDirResults, 150);
+  });
+  dirSearchInput.addEventListener('keydown', function(e){
+    if (!dirResults.classList.contains('open')) return;
+    if (e.key === 'ArrowDown'){
+      e.preventDefault();
+      if (dirMatches.length){ dirHighlight = (dirHighlight + 1) % dirMatches.length; renderDirResults(); }
+    } else if (e.key === 'ArrowUp'){
+      e.preventDefault();
+      if (dirMatches.length){ dirHighlight = (dirHighlight - 1 + dirMatches.length) % dirMatches.length; renderDirResults(); }
+    } else if (e.key === 'Enter'){
+      e.preventDefault();
+      if (dirMatches.length) selectStudent(dirMatches[dirHighlight]);
+    } else if (e.key === 'Escape'){
+      hideDirResults();
+    }
+  });
+
+  // ----- CSV upload -----
+  function parseCSV(text){
+    var rows = [], row = [], cur = '', inQ = false;
+    for (var i = 0; i < text.length; i++){
+      var ch = text[i];
+      if (inQ){
+        if (ch === '"'){
+          if (text[i+1] === '"'){ cur += '"'; i++; }
+          else inQ = false;
+        } else cur += ch;
+      } else {
+        if (ch === '"') inQ = true;
+        else if (ch === ','){ row.push(cur); cur = ''; }
+        else if (ch === '\n'){ row.push(cur); rows.push(row); row = []; cur = ''; }
+        else if (ch === '\r'){ /* skip */ }
+        else cur += ch;
+      }
+    }
+    if (cur.length || row.length){ row.push(cur); rows.push(row); }
+    return rows.filter(function(r){ return r.some(function(c){ return c.trim() !== ''; }); });
+  }
+
+  function normalizeHeader(h){
+    return String(h).toLowerCase().replace(/[^a-z]/g, '');
+  }
+  var HEADER_MAP = {
+    firstname: 'firstName', first: 'firstName',
+    middleinitial: 'mi', middle: 'mi', middlename: 'mi', mi: 'mi',
+    lastname: 'lastName', last: 'lastName', surname: 'lastName',
+    studentid: 'id', id: 'id', idnumber: 'id', studentidnumber: 'id', studentnumber: 'id',
+    email: 'email', emailaddress: 'email', studentemail: 'email'
+  };
+
+  function rowsToStudents(rows){
+    if (rows.length === 0) return { students: [], skipped: 0, usedHeader: false };
+    // Try to detect a header row and map columns by name.
+    var headerIdx = {};
+    var first = rows[0].map(normalizeHeader);
+    var mapped = 0;
+    first.forEach(function(h, i){
+      if (HEADER_MAP[h]){ headerIdx[HEADER_MAP[h]] = i; mapped++; }
+    });
+    var usedHeader = headerIdx.firstName !== undefined && headerIdx.lastName !== undefined && headerIdx.id !== undefined;
+    var dataRows, getField;
+    if (usedHeader){
+      dataRows = rows.slice(1);
+      getField = function(r, key){ return headerIdx[key] !== undefined ? (r[headerIdx[key]] || '') : ''; };
+    } else {
+      // No recognizable header — assume the column order you specified:
+      // first name, middle initial, last name, student ID, email.
+      dataRows = rows;
+      var POS = { firstName: 0, mi: 1, lastName: 2, id: 3, email: 4 };
+      getField = function(r, key){ return r[POS[key]] || ''; };
+    }
+    var students = [], skipped = 0, seen = {};
+    dataRows.forEach(function(r){
+      var s = {
+        id: String(getField(r, 'id')).trim(),
+        firstName: String(getField(r, 'firstName')).trim(),
+        mi: String(getField(r, 'mi')).trim().replace(/\.$/, ''),
+        lastName: String(getField(r, 'lastName')).trim(),
+        email: String(getField(r, 'email')).trim()
+      };
+      if (!s.id || !s.firstName || !s.lastName){ skipped++; return; }
+      if (seen[s.id]){ skipped++; return; } // duplicate ID within the file
+      seen[s.id] = true;
+      students.push(s);
+    });
+    return { students: students, skipped: skipped, usedHeader: usedHeader };
+  }
+
+  // Writes a student list into a roster's directory subcollection and
+  // updates the roster's own doc (name/count). Cleans up leftover chunk
+  // docs if the new list needs fewer chunks than the old one.
+  async function writeDirectoryToRoster(rDocRef, students, rosterFields){
+    var json = JSON.stringify(students);
+    var chunks = [];
+    for (var i = 0; i < json.length; i += DIR_CHUNK_CHARS){
+      chunks.push(json.slice(i, i + DIR_CHUNK_CHARS));
+    }
+    var batch = db.batch();
+    batch.set(rDocRef, Object.assign({ count: students.length, chunks: chunks.length, dirBytes: json.length }, rosterFields || {}), { merge: true });
+    chunks.forEach(function(c, idx){
+      batch.set(rDocRef.collection('directory').doc('c' + idx), { json: c });
+    });
+    var old = await rDocRef.collection('directory').get();
+    old.forEach(function(d){
+      var m = d.id.match(/^c(\d+)$/);
+      if (m && Number(m[1]) >= chunks.length) batch.delete(d.ref);
+    });
+    await batch.commit();
+  }
+
+  // One hidden file input serves both actions; csvMode decides which.
+  var csvMode = 'new'; // 'new' = create a roster | 'replace' = replace active roster's list
+
+  newRosterBtn.addEventListener('click', function(){
+    if (!db){ toast('Not connected — check your internet connection and refresh.'); return; }
+    csvMode = 'new';
+    csvFileInput.value = '';
+    csvFileInput.click();
+  });
+
+  uploadCsvBtn.addEventListener('click', function(){
+    if (!activeRosterId){ toast('Create a roster first — use "New roster" at the top of the page.'); return; }
+    csvMode = 'replace';
+    csvFileInput.value = '';
+    csvFileInput.click();
+  });
+
+  csvFileInput.addEventListener('change', async function(){
+    var file = csvFileInput.files && csvFileInput.files[0];
+    if (!file) return;
+    if (!db){ toast('Not connected — check your internet connection and refresh.'); return; }
+    try{
+      var text = await readFileAsText(file);
+      var parsed = rowsToStudents(parseCSV(text));
+      if (parsed.students.length === 0){
+        toast('No usable rows found in "' + file.name + '". Each student needs at least an ID, first name, and last name.');
+        return;
+      }
+      var notes = '';
+      if (parsed.skipped > 0) notes += ' Note: ' + parsed.skipped + ' row(s) will be skipped (missing ID/name or duplicate ID).';
+      if (!parsed.usedHeader) notes += ' No header row was detected, so columns were read in the order: first name, middle initial, last name, ID, email — cancel if that\'s not your file\'s layout.';
+
+      if (csvMode === 'new'){
+        var defaultName = file.name.replace(/\.csv$/i, '');
+        var name = window.prompt('Name for the new roster (e.g. "2026–27 Freshmen"):', defaultName);
+        if (name === null) return;
+        name = name.trim() || defaultName;
+        if (!confirm('Create roster "' + name + '" with ' + parsed.students.length + ' students?' + notes)) return;
+
+        newRosterBtn.disabled = true;
+        newRosterBtn.textContent = 'Creating…';
+        try{
+          var newRef = db.collection('rosters').doc();
+          await writeDirectoryToRoster(newRef, parsed.students, { name: name, createdAt: Date.now() });
+          setActiveRoster(newRef.id);
+          toast('Roster "' + name + '" created with ' + parsed.students.length + ' students. All photo stations will see it automatically.');
+        } finally {
+          newRosterBtn.disabled = false;
+          newRosterBtn.textContent = 'New roster (.csv)…';
+        }
+      } else {
+        var meta = activeRosterMeta();
+        var rosterName = meta ? meta.name : 'this roster';
+        var msg = 'Replace the student list of "' + rosterName + '"';
+        if (directory.length > 0) msg += ' (currently ' + directory.length + ' students)';
+        msg += ' with ' + parsed.students.length + ' students from "' + file.name + '"? Saved photos are not affected.' + notes;
+        if (!confirm(msg)) return;
+
+        uploadCsvBtn.disabled = true;
+        uploadCsvBtn.textContent = 'Uploading…';
+        try{
+          await writeDirectoryToRoster(rosterRef(), parsed.students, null);
+          toast('Student list updated: ' + parsed.students.length + ' students.');
+        } finally {
+          uploadCsvBtn.disabled = false;
+          uploadCsvBtn.textContent = 'Replace student list (.csv)';
+        }
+      }
+    }catch(e){
+      toast('Could not load the CSV: ' + e.message);
+    }
+  });
+
+  // ----- delete roster -----
+  async function deleteCollectionDocs(colRef){
+    // Firestore has no client-side "delete collection" — remove in batches.
+    while (true){
+      var snap = await colRef.limit(200).get();
+      if (snap.empty) break;
+      var batch = db.batch();
+      snap.forEach(function(d){ batch.delete(d.ref); });
+      await batch.commit();
+    }
+  }
+
+  deleteRosterBtn.addEventListener('click', async function(){
+    if (!activeRosterId){ return; }
+    var meta = activeRosterMeta();
+    var name = meta ? meta.name : 'this roster';
+    var photoCount = roster.length;
+    if (!confirm('Delete the roster "' + name + '"?\n\nThis permanently removes its student list AND all ' + photoCount + ' saved photo(s) — for everyone, on every photo station. This cannot be undone.')) return;
+    if (!confirm('Last check: really delete "' + name + '" and its ' + photoCount + ' photo(s) forever?')) return;
+
+    deleteRosterBtn.disabled = true;
+    deleteRosterBtn.textContent = 'Deleting…';
+    try{
+      var ref = rosterRef();
+      await deleteCollectionDocs(ref.collection('photos'));
+      await deleteCollectionDocs(ref.collection('students'));
+      await deleteCollectionDocs(ref.collection('directory'));
+      await ref.delete();
+      toast('Roster "' + name + '" deleted.');
+      // The rosters subscription will switch to another roster (or none).
+    }catch(e){
+      toast('Could not delete the roster: ' + e.message);
+    }finally{
+      deleteRosterBtn.disabled = false;
+      deleteRosterBtn.textContent = 'Delete roster…';
+    }
+  });
+
+  function readFileAsText(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = function(){ reject(new Error('Could not read ' + file.name)); };
+      reader.readAsText(file);
+    });
+  }
+
   // ---------- init ----------
   (async function init(){
     setConn('connecting');
     if (initFirebase()){
-      subscribeRoster();
+      subscribeRosterList();
     }
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
       await startCamera(null);
