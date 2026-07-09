@@ -1309,7 +1309,7 @@
     var cropH = box.height / 0.41;      // 10% shorter frame; with the 5:6 aspect the width matches the old framing
     var cropW = cropH * CROP_ASPECT;
     var headroom = cropH * 0.04;        // slim gap above the top of the head
-    var cx = box.x + box.width / 2 + cropW * 0.25; // right nudge to center the face (tuned by eye)
+    var cx = box.x + box.width / 2; // centered on the face — overlay offset bug is fixed, no compensation needed
     var top = box.y - headroom + cropH * 0.20;     // downward shift (tuned by eye)
     return clampNaturalRect(cx - cropW / 2, top, cropW, cropH);
   }
@@ -1319,7 +1319,7 @@
     var cropH = h * 0.74;
     var cropW = cropH * CROP_ASPECT;
     if (cropW > w * 0.92){ cropW = w * 0.92; cropH = cropW / CROP_ASPECT; }
-    var cropX = (w - cropW) / 2 + w * 0.11; // nudged right to match the face-detected framing
+    var cropX = (w - cropW) / 2; // horizontally centered — overlay offset bug is fixed
     var cropY = h * 0.20; // lower in the frame — crown near the top edge, more chest below
     return clampNaturalRect(cropX, cropY, cropW, cropH);
   }
@@ -1354,8 +1354,15 @@
   }
 
   function applyCropRectToDom(){
-    cropBox.style.left = cropRect.x + 'px';
-    cropBox.style.top = cropRect.y + 'px';
+    // cropRect is relative to the image; the box is positioned relative to
+    // .crop-frame. The centered image may sit offset inside the frame, so
+    // add that offset or the overlay drifts from the true crop region.
+    var imgRect = capturedImg.getBoundingClientRect();
+    var frameRect = cropFrame.getBoundingClientRect();
+    var offX = imgRect.left - frameRect.left;
+    var offY = imgRect.top - frameRect.top;
+    cropBox.style.left = (offX + cropRect.x) + 'px';
+    cropBox.style.top = (offY + cropRect.y) + 'px';
     cropBox.style.width = cropRect.w + 'px';
     cropBox.style.height = cropRect.h + 'px';
   }
