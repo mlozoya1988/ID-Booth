@@ -331,18 +331,6 @@
 
   .shutter-row{display:flex; align-items:center; gap:14px; justify-content:center; margin-bottom:4px;}
   .shutter-side{flex:1; display:flex; min-width:0; gap:10px; align-items:center;}
-  .whiten-toggle{
-    font-size:12px;
-    font-weight:600;
-    padding:8px 11px;
-    white-space:nowrap;
-  }
-  .whiten-toggle.on{
-    color:var(--confirm);
-    border-color:#BFD8CB;
-    background:#F2F8F4;
-  }
-  .whiten-toggle.on:hover:not(:disabled){background:#E7F2EB;}
   .shutter-side.left{justify-content:flex-end;}
   .shutter-side.right{justify-content:flex-start;}
   .shutter-side select{
@@ -717,7 +705,6 @@
         <div class="shutter-row" id="liveControls">
           <div class="shutter-side left">
             <button class="ghost" id="switchCamBtn" style="visibility:hidden;">Retry camera</button>
-            <button class="ghost whiten-toggle on" id="whitenToggleBtn" title="When on, anything that looks like the plain white wall is cleaned to pure white in the saved photo. Turn off for students wearing very light clothing.">Whiten wall: On</button>
           </div>
           <button class="shutter" id="shutterBtn" title="Take photo"></button>
           <div class="shutter-side right"><select id="cameraSelect"></select></div>
@@ -739,7 +726,7 @@
             <button class="ghost" id="retakeBtn">Retake</button>
             <button class="confirm" id="saveBtn">Save to ledger</button>
           </div>
-          <p class="hint">Auto-framed to a standard bust shot, with the wall cleaned to plain white. Drag the corners to zoom, the middle to reposition — the frame stays locked to that shape.</p>
+          <p class="hint">Auto-framed to a standard bust shot. Drag the corners to zoom, the middle to reposition — the frame stays locked to that shape.</p>
         </div>
 
       </div>
@@ -780,7 +767,7 @@
 
   <div class="storage-warn" id="storageWarn"><span id="storageWarnText"></span></div>
 
-  <p class="footer-note">Photos are auto-framed to a standard bust shot, the white wall behind the student is cleaned to plain white, and the file is compressed to roughly 200 KB before saving. Entries are stored in a shared online ledger (Firebase Firestore) and appear live for everyone using this page. Note: this version has no sign-in, so anyone who has the page's address can view, add, or delete entries — share the link only with your team.</p>
+  <p class="footer-note">Photos are auto-framed to a standard bust shot and the file is compressed to roughly 200 KB before saving. Entries are stored in a shared online ledger (Firebase Firestore) and appear live for everyone using this page. Note: this version has no sign-in, so anyone who has the page's address can view, add, or delete entries — share the link only with your team.</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1024,15 +1011,27 @@ var PICO_CASCADE_B64 = "AwAAAIF/gX8GAAAA1AEAAO8kyQd85BbNCOHx3gbzZVEUzu3LwAneIgnW
   var currentStream = null;
   var pendingCrop = { img: null, naturalW:0, naturalH:0 };
 
-  // ID-photo shape: portrait, head + shoulders/chest. 5:6 — slightly
-  // shorter than a classic 3:4 bust shot, per staff preference.
-  var CROP_ASPECT = 5 / 6; // width / height
-  // Bust framing, calibrated against the approved reference photo:
-  // the face fills ~33% of the frame height, with the face center
-  // sitting ~0.54 face-heights above the frame's vertical center.
-  // Used by both the live auto-zoom and the crop stage so they agree.
+  // ID-photo shape: portrait, head + shoulders/chest. The saved crop is
+  // as close to a 1:1.25 (width:height) frame as the source photo allows.
+  var CROP_ASPECT = 1 / 1.25; // width / height (= 0.8)
+  // Bust framing, shared by the live auto-zoom and the crop stage so they
+  // stay in agreement. The face fills BUST_FACE_FRAC of the frame height.
+  // HEAD_TOP_MARGIN is how far (in face-heights) the top edge of the frame
+  // sits above the top of the detected face box: smaller pulls the top of
+  // the subject's head closer to the top of the frame, larger leaves more
+  // room above the crown. The detector's box starts near the hairline, so a
+  // little margin keeps tall hairstyles from being clipped — raise it toward
+  // ~0.5 if crowns get cut off, lower it toward ~0.3 for an even tighter top.
   var BUST_FACE_FRAC = 0.33;
-  var BUST_CENTER_SHIFT = 0.54;
+  var HEAD_TOP_MARGIN = 0.40;
+  // Vertical offset from the face center to the frame center, in face-heights,
+  // derived from the two constants above. Positive means the frame center
+  // sits below the face center, i.e. the head rides high in the frame with
+  // the chest filling the space below. Kept as a function so both the live
+  // auto-zoom and the crop stage compute the exact same framing.
+  function bustCenterShift(){
+    return 0.5 / BUST_FACE_FRAC - HEAD_TOP_MARGIN - 0.5;
+  }
   // Target ceiling for the saved photo file size.
   var TARGET_BYTES = 200 * 1024; // 200 KB
 
@@ -1532,63 +1531,6 @@ var PICO_CASCADE_B64 = "AwAAAIF/gX8GAAAA1AEAAO8kyQd85BbNCOHx3gbzZVEUzu3LwAneIgnW
     return { xCenter: best[1] / w, yCenter: best[0] / h, width: best[2] / w, height: best[2] / h };
   }
 
-  // ---------- background cleanup (per-pixel, no ML) ----------
-  // Pixels that already look like a plain white-ish wall are pushed to
-  // pure white; everything else — the person included — is left exactly
-  // as captured, so edges stay perfectly crisp. A pixel qualifies when
-  // it is bright AND nearly neutral in color (low channel spread), and
-  // the push blends in smoothly so wall shading doesn't leave hard bands.
-  var WHITE_LEVEL_LO  = 165; // darkest RGB channel where whitening starts to blend in
-  var WHITE_LEVEL_HI  = 215; // ...and where it reaches full strength
-  var WHITE_SPREAD_HI = 55;  // channel spread (max−min) at which whitening has faded to zero
-  var WHITE_SPREAD_LO = 22;  // spread at/below which a color counts as fully neutral
-
-  function smoothstep01(t){
-    t = Math.max(0, Math.min(1, t));
-    return t * t * (3 - 2 * t);
-  }
-
-  function whitenBackground(canvas){
-    var ctx = canvas.getContext('2d');
-    var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    var d = img.data;
-    for (var i = 0; i < d.length; i += 4){
-      var r = d[i], g = d[i + 1], b = d[i + 2];
-      var mn = Math.min(r, g, b), mx = Math.max(r, g, b);
-      var bright  = smoothstep01((mn - WHITE_LEVEL_LO) / (WHITE_LEVEL_HI - WHITE_LEVEL_LO));
-      var neutral = smoothstep01((WHITE_SPREAD_HI - (mx - mn)) / (WHITE_SPREAD_HI - WHITE_SPREAD_LO));
-      var w = bright * neutral;
-      if (w > 0){
-        d[i]     = r + (255 - r) * w;
-        d[i + 1] = g + (255 - g) * w;
-        d[i + 2] = b + (255 - b) * w;
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-  }
-
-  // On/off toggle for the wall whitening — off is useful when a student
-  // wears very light clothing that would otherwise blend into the wall.
-  // The choice is remembered per device.
-  var whitenToggleBtn = document.getElementById('whitenToggleBtn');
-  var whitenEnabled = true;
-  try{ whitenEnabled = localStorage.getItem('idbooth-whitenBg') !== 'off'; }catch(e){}
-
-  function renderWhitenToggle(){
-    whitenToggleBtn.textContent = 'Whiten wall: ' + (whitenEnabled ? 'On' : 'Off');
-    whitenToggleBtn.classList.toggle('on', whitenEnabled);
-  }
-  renderWhitenToggle();
-
-  whitenToggleBtn.addEventListener('click', function(){
-    whitenEnabled = !whitenEnabled;
-    renderWhitenToggle();
-    try{ localStorage.setItem('idbooth-whitenBg', whitenEnabled ? 'on' : 'off'); }catch(e){}
-    toast(whitenEnabled
-      ? 'Wall whitening is on — the white wall will be cleaned to pure white in saved photos.'
-      : 'Wall whitening is off — photos keep the real background (use for very light clothing).');
-  });
-
   // ---------- live auto-zoom (bust framing in the preview) ----------
   // A face-detection loop watches the live video and picks a target zoom
   // so the face fills a standard bust framing; a rAF loop eases the
@@ -1636,8 +1578,9 @@ var PICO_CASCADE_B64 = "AwAAAIF/gX8GAAAA1AEAAO8kyQd85BbNCOHx3gbzZVEUzu3LwAneIgnW
     var t = {
       s: s,
       cx: bb.xCenter * vw,
-      // Bust framing: the face sits above center, chest below.
-      cy: bb.yCenter * vh + faceH * BUST_CENTER_SHIFT
+      // Bust framing: the face sits above center, chest below, with the
+      // top of the head kept close to the top edge (see bustCenterShift).
+      cy: bb.yCenter * vh + faceH * bustCenterShift()
     };
     clampZoomCenter(t);
     // Dead-band: ignore tiny changes so the preview doesn't jitter while
@@ -1749,7 +1692,6 @@ var PICO_CASCADE_B64 = "AwAAAIF/gX8GAAAA1AEAAO8kyQd85BbNCOHx3gbzZVEUzu3LwAneIgnW
     canvas.height = Math.max(1, Math.round(reg.h));
     var ctx = canvas.getContext('2d');
     ctx.drawImage(video, reg.x, reg.y, reg.w, reg.h, 0, 0, canvas.width, canvas.height);
-    if (whitenEnabled) whitenBackground(canvas); // clean the white-ish wall to pure white
     var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     enterCropStage(dataUrl, canvas.width, canvas.height);
   }
@@ -1810,13 +1752,13 @@ var PICO_CASCADE_B64 = "AwAAAIF/gX8GAAAA1AEAAO8kyQd85BbNCOHx3gbzZVEUzu3LwAneIgnW
 
   // Frame a standard bust shot around a detected face box (natural pixels),
   // using the same calibration as the live auto-zoom: face fills
-  // BUST_FACE_FRAC of the frame height, face center sits BUST_CENTER_SHIFT
-  // face-heights above the frame's vertical center.
+  // BUST_FACE_FRAC of the frame height, and the top of the head is kept
+  // close to the top edge (HEAD_TOP_MARGIN, via bustCenterShift()).
   function frameAroundFace(box){
     var cropH = box.height / BUST_FACE_FRAC;
     var cropW = cropH * CROP_ASPECT;
     var cx = box.x + box.width / 2;
-    var cy = box.y + box.height / 2 + box.height * BUST_CENTER_SHIFT;
+    var cy = box.y + box.height / 2 + box.height * bustCenterShift();
     return clampNaturalRect(cx - cropW / 2, cy - cropH / 2, cropW, cropH);
   }
 
@@ -1826,7 +1768,7 @@ var PICO_CASCADE_B64 = "AwAAAIF/gX8GAAAA1AEAAO8kyQd85BbNCOHx3gbzZVEUzu3LwAneIgnW
     var cropW = cropH * CROP_ASPECT;
     if (cropW > w * 0.92){ cropW = w * 0.92; cropH = cropW / CROP_ASPECT; }
     var cropX = (w - cropW) / 2; // horizontally centered — overlay offset bug is fixed
-    var cropY = h * 0.20; // lower in the frame — crown near the top edge, more chest below
+    var cropY = h * 0.15; // high in the frame — crown near the top edge, more chest below
     return clampNaturalRect(cropX, cropY, cropW, cropH);
   }
 
